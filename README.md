@@ -72,4 +72,5 @@ hello tom, age:3
 ## TODO LIST
   * 支持POST方法
   * 支持JSON数据返回
+  * 支持Path parameter
 
