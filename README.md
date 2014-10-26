@@ -62,4 +62,14 @@ g++ -I dependency/simple_log/include/ -I bin/include test/http_server_test.cpp d
 ```
 
 ## 运行
+```
+liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/hello"
+hello world! 
+liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/sayhello?name=tom&age=3"
+hello tom, age:3
+```
+
+## TODO LIST
+  * 支持POST方法
+  * 支持JSON数据返回
 
