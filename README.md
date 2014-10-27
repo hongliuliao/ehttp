@@ -1,6 +1,6 @@
 simple_server
 =============
-此组件是为了使用c++方便快速的构建http server,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
+此组件是为了使用c++方便快速的构建http server,编写基于http的api,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
 ## 特点
 * 只支持linux
 * 单进程+单线程
