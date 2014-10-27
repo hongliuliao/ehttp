@@ -29,19 +29,19 @@ simple_server
 #include "http_server.h"
 
 Response hello(Request &request) {
-	return Response(200, "hello world! \n");
+	return Response(STATUS_OK, "hello world! \n");
 }
 
 Response sayhello(Request &request) {
 	LOG_DEBUG("start process request...");
 
-	std::string name = request.get_param_by_name("name");
-	std::string age = request.get_param_by_name("age");
+	std::string name = request.get_param("name");
+	std::string age = request.get_param("age");
 
 	std::stringstream ss;
 	ss << "hello " << name << ", age:" + age << "\n";
 
-	return Response(200, ss.str());
+	return Response(STATUS_OK, ss.str());
 }
 
 int main() {
