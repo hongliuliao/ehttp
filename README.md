@@ -19,7 +19,7 @@ simple_server
 ```
 
 ## 功能列表
-  * http 1.0/1.1 GET请求
+  * http 1.0/1.1 GET/POST请求
   * 便捷的开发形式
 
 ## 例子
@@ -70,7 +70,7 @@ hello tom, age:3
 ```
 
 ## TODO LIST
-  * 支持POST方法
+  * ~~支持POST方法~~
   * 支持JSON数据返回
   * 支持Path parameter
 
