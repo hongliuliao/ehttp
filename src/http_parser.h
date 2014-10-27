@@ -10,6 +10,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 struct CodeMsg {
 	int status_code;
@@ -17,6 +18,13 @@ struct CodeMsg {
 };
 
 const static CodeMsg STATUS_OK = {200, "OK"};
+const static CodeMsg STATUS_NOT_FOUND = {404, "Not Found"};
+const static CodeMsg STATUS_METHOD_NOT_ALLOWED = {405, "Method Not Allowed"};
+
+const static int PARSE_REQ_LINE = 0;
+const static int PARSE_REQ_HEAD = 1;
+const static int PARSE_REQ_BODY = 2;
+const static int PARSE_REQ_OVER = 3;
 
 class RequestLine {
 
@@ -38,7 +46,7 @@ struct RequestHead {
 
 class RequestBody {
 public:
-	std::string req_body;
+	std::map<std::string, std::string> params;
 
 	std::map<std::string, std::string> get_params();
 
@@ -62,11 +70,14 @@ private:
 	std::string server;
 	std::string content_type;
 	std::string connection;
+	std::map<std::string, std::string> headers;
+
 public:
 	CodeMsg code_msg;
 	std::string body;
 
 	Response(CodeMsg status_code, std::string body);
+	void set_head(std::string name, std::string value);
 	std::string gen_response(std::string http_version);
 };
 
@@ -84,7 +95,9 @@ int parse_request_line(const char *line, int size, RequestLine &request_line);
 
 int parse_request_head(const char *line, int size, RequestHead &head);
 
-int parse_request(const char *request_buffer, int buffer_size, int read_size, Request &request);
+int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part, Request &request);
+
+std::vector<std::string> split_str(std::string &logContent, char split_char);
 
 
 #endif /* HTTP_PARSER_H_ */

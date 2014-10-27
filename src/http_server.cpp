@@ -75,30 +75,40 @@ int HttpServer::start(int port, int backlog) {
 		memset(read_buffer, 0, buffer_size);
 
 		int read_size;
+		Request req;
+		int parse_part = PARSE_REQ_LINE;
 		while((read_size = recv(new_fd, read_buffer, buffer_size, 0)) > 0) {
 			// 1. parse request
-			Request req;
-			int ret = parse_request(read_buffer, buffer_size, read_size, req);
-			if(ret != 0) {
+			int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, req);
+			if(ret < 0) {
 				break;
+			}
+			if(ret == 1) {
+				continue;
 			}
 
 			// 2. handle the request and gen response
+			std::string http_version = req.request_line.http_version;
 			Response res(STATUS_OK, "it works"); // default http response
 			ret = this->handle_request(req, res);
+
+			// reset req obj and parse_part for next request
+			req = Request();
+			parse_part = PARSE_REQ_LINE;
+
 			if(ret != 0) {
 				LOG_INFO("handle req error which ret:%d", ret);
 				break;
 			}
 
 			// 3. send response to client
-			std::string res_content = res.gen_response(req.request_line.http_version);
+			std::string res_content = res.gen_response(http_version);
 			if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
 				perror("send");
 			}
 
 			// 4. http 1.0 close socket by server, 1.1 close by client
-			if(req.request_line.http_version == "HTTP/1.0") {
+			if(http_version == "HTTP/1.0") {
 				break;
 			}
 
@@ -112,12 +122,31 @@ int HttpServer::start(int port, int backlog) {
 	return 0;
 }
 
-void HttpServer::add_mapping(std::string path, method_handler_ptr handler) {
-	resource_map[path] = handler;
+void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
+	Resource resource = {method, handler};
+	resource_map[path] = resource;
 }
 
 int HttpServer::handle_request(Request &req, Response &res) {
-	method_handler_ptr handle = this->resource_map[req.get_request_uri()];
+	std::string uri = req.get_request_uri();
+	if(this->resource_map.find(uri) == this->resource_map.end()) { // not found
+		res.code_msg = STATUS_NOT_FOUND;
+		res.body = STATUS_NOT_FOUND.msg;
+		LOG_INFO("page not found which uri:%s", uri.c_str());
+		return 0;
+	}
+
+	Resource resource = this->resource_map[req.get_request_uri()];
+	// check method
+	HttpMethod method = resource.method;
+	if(method.code != ALL_METHOD.code && method.name != req.request_line.method) {
+		res.code_msg = STATUS_METHOD_NOT_ALLOWED;
+		res.set_head("Allow", method.name);
+		res.body.clear();
+		LOG_INFO("not allow method, allowed:%s, request method:%s", method.name.c_str(), req.request_line.method.c_str());
+		return 0;
+	}
+	method_handler_ptr handle = resource.handler_ptr;
 	if(handle != NULL) {
 		res = handle(req);
 	}
