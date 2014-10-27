@@ -5,6 +5,7 @@ simple_server
 * 只支持linux
 * 单进程+单线程
 * g++3.4 以上编译器都支持
+* 强调简洁实用
 
 ## 依赖
  * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
