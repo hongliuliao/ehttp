@@ -25,23 +25,35 @@ simple_server
 ## 例子
 ```c++
 #include <sstream>
+#include <cstdlib>
 #include "simple_log.h"
 #include "http_server.h"
 
 Response hello(Request &request) {
-	return Response(STATUS_OK, "hello world! \n");
+	Json::Value root;
+	root["hello"] = "world";
+	return Response(STATUS_OK, root);
 }
 
 Response sayhello(Request &request) {
-	LOG_DEBUG("start process request...");
-
 	std::string name = request.get_param("name");
 	std::string age = request.get_param("age");
 
-	std::stringstream ss;
-	ss << "hello " << name << ", age:" + age << "\n";
+	Json::Value root;
+	root["name"] = name;
+	root["age"] = atoi(age.c_str());
+	return Response(STATUS_OK, root);
+}
 
-	return Response(STATUS_OK, ss.str());
+Response login(Request &request) {
+	std::string name = request.get_param("name");
+	std::string pwd = request.get_param("pwd");
+
+	LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
+	Json::Value root;
+	root["code"] = 0;
+	root["msg"] = "login success!";
+	return Response(STATUS_OK, root);
 }
 
 int main() {
@@ -49,28 +61,30 @@ int main() {
 
 	http_server.add_mapping("/hello", hello);
 	http_server.add_mapping("/sayhello", sayhello);
+	http_server.add_mapping("/login", login, POST_METHOD);
 
 	http_server.start(3490);
 	return 0;
 }
 
+
 ```
 
 ## 编译
 ```
-g++ -I dependency/simple_log/include/ -I bin/include test/http_server_test.cpp dependency/simple_log/lib/libsimplelog.a bin/lib/libsimpleserver.a -o bin/http_server_test
+g++ -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_server_test.cpp dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a bin/lib/libsimpleserver.a -o bin/http_server_test
+	
 ```
 
 ## 运行
 ```
-liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/hello"
-hello world! 
-liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/sayhello?name=tom&age=3"
-hello tom, age:3
+liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login" -d "name=tom&pwd=3"
+{"code":0,"msg":"login success!"}
+
 ```
 
 ## TODO LIST
   * ~~支持POST方法~~
-  * 支持JSON数据返回
+  * ~~支持JSON数据返回~~
   * 支持Path parameter
 
