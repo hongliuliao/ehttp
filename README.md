@@ -1,6 +1,6 @@
 simple_server
 =============
-此组件是为了使用c++方便快速的构建http server,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
+此组件是为了使用c++方便快速的构建http server,编写基于http的api,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
 ## 特点
 * 只支持linux
 * 单进程+单线程
@@ -19,7 +19,7 @@ simple_server
 ```
 
 ## 功能列表
-  * http 1.0/1.1 GET请求
+  * http 1.0/1.1(keep-alive 支持) GET/POST请求
   * 便捷的开发形式
 
 ## 例子
@@ -29,19 +29,19 @@ simple_server
 #include "http_server.h"
 
 Response hello(Request &request) {
-	return Response(200, "hello world! \n");
+	return Response(STATUS_OK, "hello world! \n");
 }
 
 Response sayhello(Request &request) {
 	LOG_DEBUG("start process request...");
 
-	std::string name = request.get_param_by_name("name");
-	std::string age = request.get_param_by_name("age");
+	std::string name = request.get_param("name");
+	std::string age = request.get_param("age");
 
 	std::stringstream ss;
 	ss << "hello " << name << ", age:" + age << "\n";
 
-	return Response(200, ss.str());
+	return Response(STATUS_OK, ss.str());
 }
 
 int main() {
@@ -70,7 +70,7 @@ hello tom, age:3
 ```
 
 ## TODO LIST
-  * 支持POST方法
+  * ~~支持POST方法~~
   * 支持JSON数据返回
   * 支持Path parameter
 
