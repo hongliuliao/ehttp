@@ -19,10 +19,12 @@ struct CodeMsg {
 const static CodeMsg STATUS_OK = {200, "OK"};
 
 class RequestLine {
+
 public:
 	std::string method;       // like GET/POST
 	std::string request_url;  // like /hello?name=aaa
 	std::string http_version; // like HTTP/1.1
+	std::map<std::string, std::string> params;
 
 	std::map<std::string, std::string> get_params();
 	std::string get_request_uri();
@@ -39,6 +41,7 @@ public:
 	std::string req_body;
 
 	std::map<std::string, std::string> get_params();
+
 };
 
 class Request {
@@ -67,7 +70,15 @@ public:
 	std::string gen_response(std::string http_version);
 };
 
+/**
+ * query_url : name=tom&age=3
+ */
 std::map<std::string, std::string> parse_query_url(std::string query_url);
+
+/**
+ * request_url : /sayhello?name=tom&age=3
+ */
+std::map<std::string, std::string> parse_request_url_params(std::string request_url);
 
 int parse_request_line(const char *line, int size, RequestLine &request_line);
 

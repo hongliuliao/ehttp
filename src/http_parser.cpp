@@ -34,20 +34,7 @@ std::map<std::string, std::string> parse_query_url(std::string query_url) {
 }
 
 std::map<std::string, std::string> RequestLine::get_params() {
-	std::map<std::string, std::string> result;
-
-	std::stringstream ss(this->request_url);
-	LOG_DEBUG("start parse params which request_url:%s", request_url.c_str());
-
-	std::string uri;
-	std::getline(ss, uri, '?');
-	if(ss.good()) {
-		std::string query_url;
-		std::getline(ss, query_url, '?');
-
-		return parse_query_url(query_url);
-	}
-	return result;
+	return this->params;
 }
 
 std::string RequestLine::get_request_uri() {
@@ -97,6 +84,23 @@ std::string Response::gen_response(std::string http_version) {
 	return res.str();
 }
 
+std::map<std::string, std::string> parse_request_url_params(std::string request_url) {
+	std::map<std::string, std::string> result;
+
+	std::stringstream ss(request_url);
+	LOG_DEBUG("start parse params which request_url:%s", request_url.c_str());
+
+	std::string uri;
+	std::getline(ss, uri, '?');
+	if(ss.good()) {
+		std::string query_url;
+		std::getline(ss, query_url, '?');
+
+		return parse_query_url(query_url);
+	}
+	return result;
+}
+
 int parse_request_line(const char *line, int size, RequestLine &request_line) {
 	std::stringstream ss(std::string(line, size));
 
@@ -108,6 +112,8 @@ int parse_request_line(const char *line, int size, RequestLine &request_line) {
 	if(!ss.good()) {
 		return -1;
 	}
+	request_line.params = parse_request_url_params(request_line.request_url);
+
 	std::getline(ss, request_line.http_version, ' ');
 
 	return 0;
