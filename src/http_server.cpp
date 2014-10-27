@@ -89,7 +89,7 @@ int HttpServer::start(int port, int backlog) {
 
 			// 2. handle the request and gen response
 			std::string http_version = req.request_line.http_version;
-			Response res(STATUS_OK, "it works"); // default http response
+			Response res(STATUS_OK, "");
 			ret = this->handle_request(req, res);
 
 			// reset req obj and parse_part for next request
@@ -150,5 +150,6 @@ int HttpServer::handle_request(Request &req, Response &res) {
 	if(handle != NULL) {
 		res = handle(req);
 	}
+	LOG_DEBUG("handle response success which code:%d, msg:%s", res.code_msg.status_code, res.code_msg.msg.c_str());
 	return 0;
 }

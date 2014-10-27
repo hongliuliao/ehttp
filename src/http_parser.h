@@ -12,6 +12,8 @@
 #include <map>
 #include <vector>
 
+#include "json/json.h"
+
 struct CodeMsg {
 	int status_code;
 	std::string msg;
@@ -76,8 +78,10 @@ public:
 	CodeMsg code_msg;
 	std::string body;
 
-	Response(CodeMsg status_code, std::string body);
+	Response(CodeMsg status_code, Json::Value body);
+
 	void set_head(std::string name, std::string value);
+
 	std::string gen_response(std::string http_version);
 };
 

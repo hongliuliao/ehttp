@@ -5,23 +5,24 @@
  *      Author: liao
  */
 #include <sstream>
+#include <cstdlib>
 #include "simple_log.h"
 #include "http_server.h"
 
 Response hello(Request &request) {
-	return Response(STATUS_OK, "hello world! \n");
+	Json::Value root;
+	root["hello"] = "world";
+	return Response(STATUS_OK, root);
 }
 
 Response sayhello(Request &request) {
-	LOG_DEBUG("start process request...");
-
 	std::string name = request.get_param("name");
 	std::string age = request.get_param("age");
 
-	std::stringstream ss;
-	ss << "hello " << name << ", age:" + age << "\n";
-
-	return Response(STATUS_OK, ss.str());
+	Json::Value root;
+	root["name"] = name;
+	root["age"] = atoi(age.c_str());
+	return Response(STATUS_OK, root);
 }
 
 Response login(Request &request) {
@@ -29,7 +30,10 @@ Response login(Request &request) {
 	std::string pwd = request.get_param("pwd");
 
 	LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
-	return Response(STATUS_OK, "login success! \n");
+	Json::Value root;
+	root["code"] = 0;
+	root["msg"] = "login success!";
+	return Response(STATUS_OK, root);
 }
 
 int main() {
@@ -37,7 +41,7 @@ int main() {
 
 	http_server.add_mapping("/hello", hello);
 	http_server.add_mapping("/sayhello", sayhello);
-	http_server.add_mapping("/login", login);
+	http_server.add_mapping("/login", login, POST_METHOD);
 
 	http_server.start(3490);
 	return 0;
