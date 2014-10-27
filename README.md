@@ -9,6 +9,7 @@ simple_server
 ## 依赖
  * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
+
 ## 性能
  * qps 3000 (vmware虚拟机上ubuntu系统测试结果)
 
