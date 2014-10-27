@@ -19,7 +19,7 @@ simple_server
 ```
 
 ## 功能列表
-  * http 1.0/1.1 GET/POST请求
+  * http 1.0/1.1(keep-alive 支持) GET/POST请求
   * 便捷的开发形式
 
 ## 例子
