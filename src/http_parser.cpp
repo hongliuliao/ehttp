@@ -65,9 +65,6 @@ Response::Response(CodeMsg status_code, Json::Value json_value) {
 
 	LOG_DEBUG("get json value in res : %s, code:%d, msg:%s", str_value.c_str(), status_code.status_code, status_code.msg.c_str());
 
-	server = "SimpleServer/0.1";
-	content_type = "text/html";
-	connection = "close";
 	this->code_msg = status_code;
 	this->body = str_value;
 };
@@ -81,7 +78,7 @@ std::string Response::gen_response(std::string http_version) {
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
 	res << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
 	res << "Server: SimpleServer/0.1" << "\r\n";
-	res << "Content-Type: text/html" << "\r\n";
+	res << "Content-Type: application/json; charset=UTF-8" << "\r\n";
 	res << "Content-Length: " << body.size() << "\r\n";
 
 	std::string con_status = "Connection: close";

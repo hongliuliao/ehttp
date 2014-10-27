@@ -69,9 +69,6 @@ public:
 
 class Response {
 private:
-	std::string server;
-	std::string content_type;
-	std::string connection;
 	std::map<std::string, std::string> headers;
 
 public:
