@@ -11,6 +11,13 @@
 #include <string>
 #include <map>
 
+struct CodeMsg {
+	int status_code;
+	std::string msg;
+};
+
+const static CodeMsg STATUS_OK = {200, "OK"};
+
 class RequestLine {
 public:
 	std::string method;       // like GET/POST
@@ -42,7 +49,7 @@ public:
 	RequestHead request_head;
 	RequestBody request_body;
 
-	std::string get_param_by_name(std::string name);
+	std::string get_param(std::string name);
 
 	std::string get_request_uri();
 };
@@ -53,11 +60,11 @@ private:
 	std::string content_type;
 	std::string connection;
 public:
-	int status_code;
+	CodeMsg code_msg;
 	std::string body;
 
-	Response(int status_code, std::string body);
-	std::string gen_response();
+	Response(CodeMsg status_code, std::string body);
+	std::string gen_response(std::string http_version);
 };
 
 std::map<std::string, std::string> parse_query_url(std::string query_url);
@@ -65,6 +72,8 @@ std::map<std::string, std::string> parse_query_url(std::string query_url);
 int parse_request_line(const char *line, int size, RequestLine &request_line);
 
 int parse_request_head(const char *line, int size, RequestHead &head);
+
+int parse_request(const char *request_buffer, int buffer_size, int read_size, Request &request);
 
 
 #endif /* HTTP_PARSER_H_ */

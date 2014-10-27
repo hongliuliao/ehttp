@@ -19,9 +19,8 @@
 #include "http_parser.h"
 #include "http_server.h"
 
-
-int HttpServer::start(int port, int backlog) {
-	int sockfd, new_fd; /* listen on sock_fd, new connection on new_fd */
+int HttpServer::listen_on(int port, int backlog) {
+	int sockfd; /* listen on sock_fd, new connection on new_fd */
 
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
@@ -43,81 +42,67 @@ int HttpServer::start(int port, int backlog) {
 		perror("listen");
 		exit(1);
 	}
+	return sockfd;
+}
+
+int HttpServer::accept_socket(int sockfd) {
+	int new_fd;
+	struct sockaddr_in their_addr; /* connector's address information */
+	socklen_t sin_size = sizeof(struct sockaddr_in);
+
+	if ((new_fd = accept(sockfd, (struct sockaddr *) &their_addr, &sin_size)) == -1) {
+		perror("accept");
+		return -1;
+	}
+
+	LOG_DEBUG("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
+	return new_fd;
+}
+
+int HttpServer::start(int port, int backlog) {
+
+	int sockfd = this->listen_on(port, backlog);
 
 	while (1) { /* main accept() loop */
-		struct sockaddr_in their_addr; /* connector's address information */
-		socklen_t sin_size = sizeof(struct sockaddr_in);
 
-		if ((new_fd = accept(sockfd, (struct sockaddr *) &their_addr, &sin_size)) == -1) {
-			perror("accept");
+		int new_fd = this->accept_socket(sockfd);
+		if(new_fd == -1) {
 			continue;
 		}
-
-		LOG_DEBUG("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
 
 		int buffer_size = 1024;
 		char read_buffer[buffer_size];
 		memset(read_buffer, 0, buffer_size);
 
 		int read_size;
-		int line_num = 0;
-		RequestLine req_line;
 		while((read_size = recv(new_fd, read_buffer, buffer_size, 0)) > 0) {
-
-			if(read_buffer[read_size - 2] != '\r' || read_buffer[read_size - 1] != '\n') {
-				LOG_DEBUG("NOT VALID DATA!");
-				break;
-			}
-			std::string req_str(read_buffer, buffer_size);
-			LOG_DEBUG("read from client: size:%d, content:%s", read_size, req_str.c_str());
-
-			std::stringstream ss(req_str);
-			std::string line;
-			int ret = 0;
-			while(ss.good() && line != "\r") {
-				std::getline(ss, line, '\n');
-				line_num++;
-
-				// parse request line like  "GET /index.jsp HTTP/1.1"
-				if(line_num == 1) {
-					ret = parse_request_line(line.c_str(), line.size() - 1, req_line);
-					if(ret == 0) {
-						LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s", req_line.method.c_str(), req_line.request_url.c_str(), req_line.http_version.c_str());
-					} else {
-						LOG_INFO("parse request line error!");
-						break;
-					}
-				}
-			}
-
+			// 1. parse request
+			Request req;
+			int ret = parse_request(read_buffer, buffer_size, read_size, req);
 			if(ret != 0) {
 				break;
 			}
 
-			if(line == "\r" && req_line.method == "GET") {
-				Request req;
-				req.request_line = req_line;
-
-				// default http response
-				Response res(200, "hello");
-
-				method_handler_ptr handle = this->resource_map[req.get_request_uri()];
-				if(handle != NULL) {
-					res = handle(req);
-				}
-
-				std::string res_content = res.gen_response();
-				if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
-					perror("send");
-				}
-				line_num = 0;
-				// http 1.0 close socket by server, 1.1 close by client
-				if(req_line.http_version == "HTTP/1.0") {
-					break;
-				}
+			// 2. handle the request and gen response
+			Response res(STATUS_OK, "it works"); // default http response
+			ret = this->handle_request(req, res);
+			if(ret != 0) {
+				LOG_INFO("handle req error which ret:%d", ret);
+				break;
 			}
 
-			memset(read_buffer, 0, buffer_size);
+			// 3. send response to client
+			std::string res_content = res.gen_response(req.request_line.http_version);
+			if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
+				perror("send");
+			}
+
+			// 4. http 1.0 close socket by server, 1.1 close by client
+			if(req.request_line.http_version == "HTTP/1.0") {
+				break;
+			}
+
+			memset(read_buffer, 0, buffer_size); // ready for next request to "Keep-Alive"
 		}
 
 		LOG_DEBUG("connect close!");
@@ -129,4 +114,12 @@ int HttpServer::start(int port, int backlog) {
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler) {
 	resource_map[path] = handler;
+}
+
+int HttpServer::handle_request(Request &req, Response &res) {
+	method_handler_ptr handle = this->resource_map[req.get_request_uri()];
+	if(handle != NULL) {
+		res = handle(req);
+	}
+	return 0;
 }
