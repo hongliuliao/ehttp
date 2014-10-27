@@ -7,8 +7,8 @@ simple_server
 * g++3.4 以上编译器都支持
 
 ## 依赖
- * [simple_log](https://github.com/hongliuliao/simple_log)组件
-
+ * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
+ * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
 ## 性能
  * qps 3000 (vmware虚拟机上ubuntu系统测试结果)
 
@@ -21,6 +21,7 @@ simple_server
 ## 功能列表
   * http 1.0/1.1(keep-alive 支持) GET/POST请求
   * 便捷的开发形式
+  * Json格式的数据返回
 
 ## 例子
 ```c++
