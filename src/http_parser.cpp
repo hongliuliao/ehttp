@@ -78,7 +78,9 @@ std::string Response::gen_response(std::string http_version) {
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
 	res << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
 	res << "Server: SimpleServer/0.1" << "\r\n";
-	res << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+	if(headers.find("Content-Type") == headers.end()) {
+		res << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+	}
 	res << "Content-Length: " << body.size() << "\r\n";
 
 	std::string con_status = "Connection: close";
