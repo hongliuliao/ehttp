@@ -92,9 +92,9 @@ int HttpServer::start(int port, int backlog) {
 			}
 
 			// 2. handle the request and gen response
-			std::string http_version = req.request_line.http_version;
-			std::string request_url = req.request_line.request_url;
-			std::string http_method = req.request_line.method;
+			std::string http_version = req.line.http_version;
+			std::string request_url = req.line.request_url;
+			std::string http_method = req.line.method;
 			Response res(STATUS_OK, "");
 			ret = this->handle_request(req, res);
 
@@ -151,11 +151,11 @@ int HttpServer::handle_request(Request &req, Response &res) {
 	Resource resource = this->resource_map[req.get_request_uri()];
 	// check method
 	HttpMethod method = resource.method;
-	if(method.code != ALL_METHOD.code && method.name != req.request_line.method) {
+	if(method.code != ALL_METHOD.code && method.name != req.line.method) {
 		res.code_msg = STATUS_METHOD_NOT_ALLOWED;
 		res.set_head("Allow", method.name);
 		res.body.clear();
-		LOG_INFO("not allow method, allowed:%s, request method:%s", method.name.c_str(), req.request_line.method.c_str());
+		LOG_INFO("not allow method, allowed:%s, request method:%s", method.name.c_str(), req.line.method.c_str());
 		return 0;
 	}
 	method_handler_ptr handle = resource.handler_ptr;

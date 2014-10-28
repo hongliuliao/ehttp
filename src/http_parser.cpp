@@ -46,17 +46,17 @@ std::string RequestLine::get_request_uri() {
 }
 
 std::string Request::get_param(std::string name) {
-	if(request_line.method == "GET") {
-		return request_line.get_params()[name];
+	if(line.method == "GET") {
+		return line.get_params()[name];
 	}
-	if(request_line.method == "POST") {
-		return request_body.get_params()[name];
+	if(line.method == "POST") {
+		return body.get_params()[name];
 	}
 	return "";
 }
 
 std::string Request::get_request_uri() {
-	return request_line.get_request_uri();
+	return line.get_request_uri();
 }
 
 Response::Response(CodeMsg status_code, Json::Value json_value) {
@@ -167,7 +167,7 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 		if(line == "\r") {  /* the last line in head */
 			parse_part = PARSE_REQ_OVER;
 
-			if(request.request_line.method == "POST") { // post request need body
+			if(request.line.method == "POST") { // post request need body
 				parse_part = PARSE_REQ_BODY;
 			}
 			continue;
@@ -178,7 +178,7 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 			RequestLine req_line;
 			ret = parse_request_line(line.c_str(), line.size() - 1, req_line);
 			if(ret == 0) {
-				request.request_line = req_line;
+				request.line = req_line;
 				LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s", req_line.method.c_str(), req_line.request_url.c_str(), req_line.http_version.c_str());
 			} else {
 				LOG_INFO("parse request line error!");
@@ -200,7 +200,7 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 				head.content_length = atoi(parts[1].c_str());
 				LOG_DEBUG("read content_length:%d", head.content_length);
 			}
-			request.request_head = head;
+			request.head = head;
 			continue;
 		}
 
@@ -208,7 +208,7 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 			LOG_DEBUG("start PARSE_REQ_BODY line:%s", line.c_str());
 			RequestBody body;
 			body.params = parse_query_url(line);
-			request.request_body = body;
+			request.body = body;
 			parse_part = PARSE_REQ_OVER;
 			break;
 		}

@@ -56,11 +56,9 @@ public:
 
 class Request {
 public:
-	std::string request_url;
-
-	RequestLine request_line;
-	RequestHead request_head;
-	RequestBody request_body;
+	RequestLine line;
+	RequestHead head;
+	RequestBody body;
 
 	std::string get_param(std::string name);
 

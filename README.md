@@ -2,9 +2,9 @@ simple_server
 =============
 此组件是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
 ## 特点
-* 只支持linux
-* 单进程+单线程
-* g++3.4 以上编译器都支持
+* linux only
+* 单进程 + 单线程 
+* g++3.4 +
 * 强调简洁实用
 
 ## 依赖
@@ -12,7 +12,7 @@ simple_server
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
 
 ## 性能
- * qps 3000 (vmware虚拟机上ubuntu系统测试结果)
+ * qps 3000+ 
 
 ## 构建 && 测试
 ```
@@ -53,6 +53,7 @@ Response login(Request &request) {
 	std::string pwd = request.get_param("pwd");
 
 	LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
+	
 	Json::Value root;
 	root["code"] = 0;
 	root["msg"] = "login success!";
