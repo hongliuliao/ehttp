@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <sstream>
 #include "simple_log.h"
@@ -77,6 +78,9 @@ int HttpServer::start(int port, int backlog) {
 		int read_size;
 		Request req;
 		int parse_part = PARSE_REQ_LINE;
+		struct timeval start, end;
+		gettimeofday(&start, NULL);
+
 		while((read_size = recv(new_fd, read_buffer, buffer_size, 0)) > 0) {
 			// 1. parse request
 			int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, req);
@@ -89,6 +93,8 @@ int HttpServer::start(int port, int backlog) {
 
 			// 2. handle the request and gen response
 			std::string http_version = req.request_line.http_version;
+			std::string request_url = req.request_line.request_url;
+			std::string http_method = req.request_line.method;
 			Response res(STATUS_OK, "");
 			ret = this->handle_request(req, res);
 
@@ -106,6 +112,12 @@ int HttpServer::start(int port, int backlog) {
 			if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
 				perror("send");
 			}
+
+			// access log
+			gettimeofday(&end, NULL);
+			int cost_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
+			LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time);
+			start = end; // for next request start time
 
 			// 4. http 1.0 close socket by server, 1.1 close by client
 			if(http_version == "HTTP/1.0") {
