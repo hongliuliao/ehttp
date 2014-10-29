@@ -79,9 +79,11 @@ int HttpServer::start(int port, int backlog) {
 		Request req;
 		int parse_part = PARSE_REQ_LINE;
 		struct timeval start, end;
-		gettimeofday(&start, NULL);
 
 		while((read_size = recv(new_fd, read_buffer, buffer_size, 0)) > 0) {
+			if(parse_part == PARSE_REQ_LINE) {
+				gettimeofday(&start, NULL);
+			}
 			// 1. parse request
 			int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, req);
 			if(ret < 0) {
@@ -117,7 +119,6 @@ int HttpServer::start(int port, int backlog) {
 			gettimeofday(&end, NULL);
 			int cost_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 			LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time);
-			start = end; // for next request start time
 
 			// 4. http 1.0 close socket by server, 1.1 close by client
 			if(http_version == "HTTP/1.0") {
