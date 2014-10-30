@@ -34,6 +34,9 @@ int HttpServer::listen_on(int port, int backlog) {
 	my_addr.sin_port = htons(port); /* short, network byte order */
 	my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
 
+	int opt = 1;
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
 	if (bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1) {
 		perror("bind");
 		exit(1);
@@ -99,7 +102,7 @@ int HttpServer::start(int port, int backlog) {
 			std::string http_version = req.line.http_version;
 			std::string request_url = req.line.request_url;
 			std::string http_method = req.line.method;
-			bool is_keepalive = req.get_header("Connection") == "Keep-Alive";
+			bool is_keepalive = (strcasecmp(req.get_header("Connection").c_str(), "keep-alive") == 0);
 			LOG_DEBUG("get header property 'Connection' : %s, is_keepalive status : %d", req.get_header("Connection").c_str(), is_keepalive);
 
 			Response res(STATUS_OK, "");
