@@ -114,7 +114,7 @@ int HttpServer::start(int port, int backlog) {
 			}
 
 			// 3. send response to client
-			std::string res_content = res.gen_response(http_version);
+			std::string res_content = res.gen_response(http_version, is_keepalive);
 			if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
 				perror("send");
 			}

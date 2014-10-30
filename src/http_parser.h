@@ -75,7 +75,7 @@ public:
 
 	void set_head(std::string name, std::string value);
 
-	std::string gen_response(std::string http_version);
+	std::string gen_response(std::string http_version, bool is_keepalive);
 };
 
 /**

@@ -81,7 +81,7 @@ void Response::set_head(std::string name, std::string value) {
 	this->headers[name] = value;
 }
 
-std::string Response::gen_response(std::string http_version) {
+std::string Response::gen_response(std::string http_version, bool is_keepalive) {
 	std::stringstream res;
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
 	res << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
@@ -92,7 +92,7 @@ std::string Response::gen_response(std::string http_version) {
 	res << "Content-Length: " << body.size() << "\r\n";
 
 	std::string con_status = "Connection: close";
-	if(http_version == "HTTP/1.1") {
+	if(is_keepalive) {
 		con_status = "Connection: Keep-Alive";
 	}
 	res << con_status << "\r\n";
