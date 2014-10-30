@@ -7,6 +7,7 @@ all:
 	ar -rcs libsimpleserver.a bin/*.o
 	mv libsimpleserver.a bin/lib/
 	rm -rf bin/*.o
-test: test/http_server_test.cpp
+test: test/http_server_test.cpp test/http_parser_test.cpp
 	g++ -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_server_test.cpp dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a bin/lib/libsimpleserver.a -o bin/http_server_test
+	g++ -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_parser_test.cpp dependency/simple_log/lib/libsimplelog.a bin/lib/libsimpleserver.a dependency/json-cpp/lib/libjson_libmt.a -o bin/http_parser_test
 	

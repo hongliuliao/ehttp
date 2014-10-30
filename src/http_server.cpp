@@ -99,7 +99,8 @@ int HttpServer::start(int port, int backlog) {
 			std::string http_version = req.line.http_version;
 			std::string request_url = req.line.request_url;
 			std::string http_method = req.line.method;
-			bool is_keepalive = req.get_header("Connection") == " Keep-Alive";
+			bool is_keepalive = req.get_header("Connection") == "Keep-Alive";
+			LOG_DEBUG("get header property 'Connection' : %s, is_keepalive status : %d", req.get_header("Connection").c_str(), is_keepalive);
 
 			Response res(STATUS_OK, "");
 			ret = this->handle_request(req, res);

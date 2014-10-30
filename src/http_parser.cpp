@@ -217,6 +217,22 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 	return ret;
 }
 
+static inline std::string &ltrim(std::string &s) {
+        s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+        return s;
+}
+
+// trim from end
+static inline std::string &rtrim(std::string &s) {
+        s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+        return s;
+}
+
+// trim from both ends
+static inline std::string &trim(std::string &s) {
+        return ltrim(rtrim(s));
+}
+
 std::vector<std::string> split_str(std::string &str, char split_char) {
 	std::vector<std::string> result;
 
@@ -224,7 +240,8 @@ std::vector<std::string> split_str(std::string &str, char split_char) {
 	while(ss.good()) {
 		std::string temp;
 		std::getline(ss, temp, split_char);
-		result.push_back(temp);
+
+		result.push_back(trim(temp));
 	}
 
 	return result;
