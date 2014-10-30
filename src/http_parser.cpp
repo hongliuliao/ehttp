@@ -55,6 +55,14 @@ std::string Request::get_param(std::string name) {
 	return "";
 }
 
+void Request::add_header(std::string name, std::string value) {
+	this->headers[name] = value;
+}
+
+std::string Request::get_header(std::string name) {
+	return this->headers[name];
+}
+
 std::string Request::get_request_uri() {
 	return line.get_request_uri();
 }
@@ -135,22 +143,6 @@ int parse_request_line(const char *line, int size, RequestLine &request_line) {
 	return 0;
 }
 
-int parse_request_head(const char *line, int size, RequestHead &head) {
-	std::stringstream ss(std::string(line, size));
-	std::string head_name;
-	std::getline(ss, head_name, ':');
-	if(!ss.good()) {
-		return -1;
-	}
-
-	if(head_name == "Accept") {
-		std::getline(ss, head.accept, ':');
-	}
-	if(head_name == "User-Agent") {
-		std::getline(ss, head.user_agent, ':');
-	}
-}
-
 int parse_request(const char *read_buffer, int buffer_size, int read_size, int &parse_part, Request &request) {
 	if(read_size == buffer_size) {
 		LOG_WARN("NOT VALID DATA! single line max size is %d", buffer_size);
@@ -179,30 +171,32 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 			LOG_DEBUG("start parse req_line line:%s", line.c_str());
 			RequestLine req_line;
 			ret = parse_request_line(line.c_str(), line.size() - 1, req_line);
-			if(ret == 0) {
-				request.line = req_line;
-				LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s", req_line.method.c_str(), req_line.request_url.c_str(), req_line.http_version.c_str());
-			} else {
+			if(ret != 0) {
 				LOG_INFO("parse request line error!");
 				return -1;
 			}
+			request.line = req_line;
 			parse_part = PARSE_REQ_HEAD;
+			LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s", req_line.method.c_str(), req_line.request_url.c_str(), req_line.http_version.c_str());
+
+			// check method
+			if(req_line.method != "GET" && req_line.method != "POST") {
+				LOG_ERROR("un support method:%s", req_line.method.c_str());
+				return -1;
+			}
 			continue;
 		}
 
 		if(parse_part == PARSE_REQ_HEAD && !line.empty()) { // read head
 			LOG_DEBUG("start PARSE_REQ_HEAD line:%s", line.c_str());
-			RequestHead head;
+
 			std::vector<std::string> parts = split_str(line, ':'); // line like Cache-Control:max-age=0
 			if(parts.size() < 2) {
 				LOG_WARN("not valid head which line:%s", line.c_str());
 				continue;
 			}
-			if(parts[0] == "Content-Length") {
-				head.content_length = atoi(parts[1].c_str());
-				LOG_DEBUG("read content_length:%d", head.content_length);
-			}
-			request.head = head;
+
+			request.add_header(parts[0], parts[1]);
 			continue;
 		}
 

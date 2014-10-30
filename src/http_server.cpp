@@ -43,6 +43,8 @@ int HttpServer::listen_on(int port, int backlog) {
 		perror("listen");
 		exit(1);
 	}
+
+	LOG_INFO("start HttpServer on port : %d", port);
 	return sockfd;
 }
 
@@ -97,6 +99,8 @@ int HttpServer::start(int port, int backlog) {
 			std::string http_version = req.line.http_version;
 			std::string request_url = req.line.request_url;
 			std::string http_method = req.line.method;
+			bool is_keepalive = req.get_header("Connection") == " Keep-Alive";
+
 			Response res(STATUS_OK, "");
 			ret = this->handle_request(req, res);
 
@@ -120,8 +124,8 @@ int HttpServer::start(int port, int backlog) {
 			int cost_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 			LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time);
 
-			// 4. http 1.0 close socket by server, 1.1 close by client
-			if(http_version == "HTTP/1.0") {
+			// 4. by default, http 1.0 close socket by server, 1.1 close by client
+			if(!is_keepalive) {
 				break;
 			}
 

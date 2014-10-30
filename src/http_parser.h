@@ -40,12 +40,6 @@ public:
 	std::string get_request_uri();
 };
 
-struct RequestHead {
-	std::string accept;
-	std::string user_agent;
-	int content_length;
-};
-
 class RequestBody {
 public:
 	std::map<std::string, std::string> params;
@@ -55,12 +49,16 @@ public:
 };
 
 class Request {
+	std::map<std::string, std::string> headers;
 public:
 	RequestLine line;
-	RequestHead head;
 	RequestBody body;
 
 	std::string get_param(std::string name);
+
+	void add_header(std::string name, std::string value);
+
+	std::string get_header(std::string name);
 
 	std::string get_request_uri();
 };
@@ -91,8 +89,6 @@ std::map<std::string, std::string> parse_query_url(std::string query_url);
 std::map<std::string, std::string> parse_request_url_params(std::string request_url);
 
 int parse_request_line(const char *line, int size, RequestLine &request_line);
-
-int parse_request_head(const char *line, int size, RequestHead &head);
 
 int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part, Request &request);
 
