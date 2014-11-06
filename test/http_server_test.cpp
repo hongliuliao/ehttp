@@ -43,6 +43,6 @@ int main() {
 	http_server.add_mapping("/sayhello", sayhello);
 	http_server.add_mapping("/login", login, POST_METHOD);
 
-	http_server.start(3490);
+	http_server.start_with_noblocking(3490);
 	return 0;
 }

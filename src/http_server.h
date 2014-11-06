@@ -10,6 +10,7 @@
 
 #include <string>
 #include <map>
+#include "sys/epoll.h"
 #include "http_parser.h"
 
 struct HttpMethod {
@@ -37,9 +38,16 @@ private:
 
 	int accept_socket(int sockfd);
 
+	int setNonblocking(int fd);
+
+	void do_use_fd(int fd, int events);
 public:
 
 	int start(int port, int backlog = 10);
+
+	int start_with_noblocking(int port, int backlog = 10);
+
+	int close_and_remove_epoll_events(int &epollfd, epoll_event &epoll_event);
 
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
 

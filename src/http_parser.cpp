@@ -67,6 +67,10 @@ std::string Request::get_request_uri() {
 	return line.get_request_uri();
 }
 
+Response::Response(CodeMsg status_code) {
+	this->code_msg = status_code;
+}
+
 Response::Response(CodeMsg status_code, Json::Value json_value) {
 	Json::FastWriter writer;
 	std::string str_value = writer.write(json_value);
