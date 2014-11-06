@@ -2,8 +2,8 @@ simple_server
 =============
 此组件是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
 ## 特点
-* linux only
-* 单进程 + 单线程 
+* linux 2.6 +
+* 单进程 + 单线程 + epoll
 * g++3.4 +
 * 强调简洁实用
 
