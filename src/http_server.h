@@ -45,8 +45,6 @@ public:
 
 	int start(int port, int backlog = 10);
 
-	int start_with_noblocking(int port, int backlog = 10);
-
 	int close_and_remove_epoll_events(int &epollfd, epoll_event &epoll_event);
 
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);

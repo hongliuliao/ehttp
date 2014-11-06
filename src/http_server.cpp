@@ -76,7 +76,7 @@ int HttpServer::setNonblocking(int fd) {
 
 }
 
-int HttpServer::start_with_noblocking(int port, int backlog) {
+int HttpServer::start(int port, int backlog) {
 
 	int sockfd = this->listen_on(port, backlog);
 
@@ -192,84 +192,6 @@ int HttpServer::close_and_remove_epoll_events(int &epollfd, epoll_event &epoll_e
 
 	int ret = close(fd);
 	LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
-	return 0;
-}
-
-int HttpServer::start(int port, int backlog) {
-
-	int sockfd = this->listen_on(port, backlog);
-
-	while (1) { /* main accept() loop */
-
-		int new_fd = this->accept_socket(sockfd);
-		if(new_fd == -1) {
-			continue;
-		}
-
-		int buffer_size = 1024;
-		char read_buffer[buffer_size];
-		memset(read_buffer, 0, buffer_size);
-
-		int read_size;
-		Request req;
-		int parse_part = PARSE_REQ_LINE;
-		struct timeval start, end;
-
-		while((read_size = recv(new_fd, read_buffer, buffer_size, 0)) > 0) {
-			if(parse_part == PARSE_REQ_LINE) {
-				gettimeofday(&start, NULL);
-			}
-			// 1. parse request
-			int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, req);
-			if(ret < 0) {
-				break;
-			}
-			if(ret == 1) {
-				continue;
-			}
-
-			// 2. handle the request and gen response
-			std::string http_version = req.line.http_version;
-			std::string request_url = req.line.request_url;
-			std::string http_method = req.line.method;
-			bool is_keepalive = (strcasecmp(req.get_header("Connection").c_str(), "keep-alive") == 0);
-			LOG_DEBUG("get header property 'Connection' : %s, is_keepalive status : %d", req.get_header("Connection").c_str(), is_keepalive);
-
-			Response res(STATUS_OK, "");
-			ret = this->handle_request(req, res);
-
-			// reset req obj and parse_part for next request
-			req = Request();
-			parse_part = PARSE_REQ_LINE;
-
-			if(ret != 0) {
-				LOG_INFO("handle req error which ret:%d", ret);
-				break;
-			}
-
-			// 3. send response to client
-			std::string res_content = res.gen_response(http_version, is_keepalive);
-			if (send(new_fd, res_content.c_str(), res_content.size(), 0) == -1) {
-				perror("send");
-			}
-
-			// access log
-			gettimeofday(&end, NULL);
-			int cost_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
-			LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time);
-
-			// 4. by default, http 1.0 close socket by server, 1.1 close by client
-			if(!is_keepalive) {
-				break;
-			}
-
-			memset(read_buffer, 0, buffer_size); // ready for next request to "Keep-Alive"
-		}
-
-		LOG_DEBUG("connect close!");
-		close(new_fd);
-	}
-
 	return 0;
 }
 
