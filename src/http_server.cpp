@@ -168,11 +168,14 @@ int HttpServer::start(int port, int backlog) {
 					if(body_size - write_num < buf_size) {
 						buf_size = body_size - write_num;
 					}
-					write_num += send(fd, p + write_num, buf_size, 0);
+					int one_write = send(fd, p + write_num, buf_size, 0);
+					if(write_num < 0) {
+						perror("send");
+						break;
+					}
+					write_num += one_write;
 				}
-				if(write_num < 0) {
-					perror("send");
-				}
+
 				LOG_DEBUG("send complete which write_num:%d, content_size:%d", write_num, content.size());
 
 				hc->print_access_log();
