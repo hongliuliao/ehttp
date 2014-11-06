@@ -167,7 +167,7 @@ int HttpServer::start(int port, int backlog) {
 						buf_size = body_size - write_num;
 					}
 					int one_write = send(fd, p + write_num, buf_size, 0);
-					if(write_num < 0) {
+					if(one_write < 0) {
 						perror("send");
 						break;
 					}
