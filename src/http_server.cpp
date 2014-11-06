@@ -133,6 +133,8 @@ int HttpServer::start(int port, int backlog) {
 
 					int parse_part = PARSE_REQ_LINE;
 					HttpContext *http_context = (HttpContext *) events[i].data.ptr;
+					http_context->record_start_time();
+
 					int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, *(http_context->req));
 					if(ret != 0) {
 						LOG_WARN("parse_request error which ret:%d", ret);
@@ -156,10 +158,22 @@ int HttpServer::start(int port, int backlog) {
 
 				bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
 				std::string content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
-				int write_num = send(fd, content.c_str(), content.size(), 0);
+
+				// write until body response
+				int body_size = content.size();
+				int write_num = 0;
+				const char *p = content.c_str();
+				while(body_size > write_num) {
+					int buf_size = 65536;
+					if(body_size - write_num < buf_size) {
+						buf_size = body_size - write_num;
+					}
+					write_num += send(fd, p + write_num, buf_size, 0);
+				}
 				if(write_num < 0) {
 					perror("send");
 				}
+				LOG_DEBUG("send complete which write_num:%d, content_size:%d", write_num, content.size());
 
 				hc->print_access_log();
 

@@ -93,7 +93,6 @@ public:
 		this->req = &(*req);
 		this->res = &(*res);
 		this->fd = fd;
-		gettimeofday(&start, NULL);
 	}
 
 	~HttpContext() {
@@ -109,6 +108,11 @@ public:
 		}
 	}
 
+	int record_start_time() {
+		gettimeofday(&start, NULL);
+		return 0;
+	}
+
 	int get_cost_time() {
 		timeval end;
 		gettimeofday(&end, NULL);
@@ -120,7 +124,7 @@ public:
 		std::string http_method = this->req->line.method;
 		std::string request_url = this->req->line.request_url;
 		int cost_time = get_cost_time();
-		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time);
+		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
 	}
 };
 
