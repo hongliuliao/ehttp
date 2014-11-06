@@ -92,4 +92,5 @@ liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login" -d "name=tom&
   * ~~支持JSON数据返回~~
   * 支持Path parameter
   * ~~增加一个proxy来处理高并发~~ 使用epoll来实现,2014-11-6
+  * 解决CPU导致的瓶颈,提高qps
 
