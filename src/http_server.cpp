@@ -112,7 +112,6 @@ int HttpServer::start(int port, int backlog) {
 				epoll_event conn_sock_ev;
 				conn_sock_ev.events = EPOLLIN | EPOLLET;
 				conn_sock_ev.data.ptr = new HttpContext(new Request(), new Response(STATUS_OK), conn_sock);
-				LOG_DEBUG("init http context success which ptr:%d, data.fd:%d", conn_sock_ev.data.ptr, ((HttpContext *)conn_sock_ev.data.ptr)->fd);
 
 				if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
 				   perror("epoll_ctl: conn_sock");
@@ -126,7 +125,6 @@ int HttpServer::start(int port, int backlog) {
 				char read_buffer[buffer_size];
 				memset(read_buffer, 0, buffer_size);
 				int read_size = 0;
-				LOG_DEBUG("get readable epoll_event which data.fd:%d, data.ptr:%d", ((HttpContext *)events[i].data.ptr)->fd, events[i].data.ptr);
 
 				if((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
 					LOG_DEBUG("read success which read content:%s", read_buffer);
