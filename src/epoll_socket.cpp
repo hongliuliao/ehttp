@@ -131,6 +131,7 @@ int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int b
 						close_and_release(epollfd, events[i], socket_handler);
 						continue;
 					}
+					memset(read_buffer, 0, buffer_size); // reset buffer for next read
 				}
 
 				if(read_size == 0 || (read_size == -1 && errno != EAGAIN)) {
