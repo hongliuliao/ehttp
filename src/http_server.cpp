@@ -32,12 +32,12 @@ void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpM
 	http_handler.add_mapping(path, handler, method);
 }
 
-void HttpEpollHandler::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
+void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
 	Resource resource = {method, handler};
 	resource_map[path] = resource;
 }
 
-int HttpEpollHandler::handle_request(Request &req, Response &res) {
+int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 	std::string uri = req.get_request_uri();
 	if(this->resource_map.find(uri) == this->resource_map.end()) { // not found
 		res.code_msg = STATUS_NOT_FOUND;
@@ -64,13 +64,13 @@ int HttpEpollHandler::handle_request(Request &req, Response &res) {
 	return 0;
 }
 
-int HttpEpollHandler::on_accept(EpollContext &epoll_context) {
+int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 	int conn_sock = epoll_context.fd;
 	epoll_context.ptr = new HttpContext(new Request(), new Response(STATUS_OK), conn_sock);
 	return 0;
 }
 
-int HttpEpollHandler::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
+int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
 	int parse_part = PARSE_REQ_LINE;
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
 	http_context->record_start_time();
@@ -86,7 +86,7 @@ int HttpEpollHandler::on_readable(EpollContext &epoll_context, char *read_buffer
 	return 0;
 }
 
-int HttpEpollHandler::on_writeable(EpollContext &epoll_context) {
+int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int fd = epoll_context.fd;
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
 	bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
@@ -118,7 +118,7 @@ int HttpEpollHandler::on_writeable(EpollContext &epoll_context) {
 	return 1;
 }
 
-int HttpEpollHandler::on_close(EpollContext &epoll_context) {
+int HttpEpollWatcher::on_close(EpollContext &epoll_context) {
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
 	if(hc != NULL) {
 		delete hc;

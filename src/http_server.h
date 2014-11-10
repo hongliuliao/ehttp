@@ -30,7 +30,7 @@ struct Resource {
 	method_handler_ptr handler_ptr;
 };
 
-class HttpEpollHandler : public EpollSocketHandler {
+class HttpEpollWatcher : public EpollSocketWatcher {
 private:
 	std::map<std::string, Resource> resource_map;
 public:
@@ -51,7 +51,7 @@ public:
 class HttpServer {
 
 private:
-	HttpEpollHandler http_handler;
+	HttpEpollWatcher http_handler;
 
 public:
 

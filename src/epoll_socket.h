@@ -16,7 +16,7 @@ public:
 	int fd;
 };
 
-class EpollSocketHandler {
+class EpollSocketWatcher {
 public:
 	virtual int on_accept(EpollContext &epoll_context) = 0;
 
@@ -36,11 +36,11 @@ private:
 
 	int listen_on(int port, int backlog);
 
-	int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketHandler &socket_handler);
+	int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_watcher);
 
 public:
 
-	int start_epoll(int port, EpollSocketHandler &socket_handler, int backlog = 10);
+	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog = 10);
 
 };
 

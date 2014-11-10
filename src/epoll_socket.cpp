@@ -68,7 +68,7 @@ int EpollSocket::accept_socket(int sockfd) {
 	return new_fd;
 }
 
-int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int backlog) {
+int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog) {
 	int sockfd = this->listen_on(port, backlog);
 
 	struct epoll_event ev;
@@ -164,7 +164,7 @@ int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int b
 	}
 }
 
-int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketHandler &socket_handler) {
+int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
 	LOG_INFO("connect close");
 
 	EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
