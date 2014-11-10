@@ -134,7 +134,7 @@ int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int b
 					memset(read_buffer, 0, buffer_size); // reset buffer for next read
 				}
 
-				if(read_size == 0 || (read_size == -1 && errno != EAGAIN)) {
+				if(read_size == 0 /* connect close*/ || (read_size == -1 && errno != EAGAIN) /* io error*/) {
 					LOG_DEBUG("read_size not normal which size:%d", read_size);
 					close_and_release(epollfd, events[i], socket_handler);
 					continue;
