@@ -4,6 +4,7 @@
  *  Created on: Nov 10, 2014
  *      Author: liao
  */
+#include <cerrno>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -116,12 +117,13 @@ int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int b
 			} else if(events[i].events & EPOLLIN ){ // readable
 				EpollContext *epoll_context = (EpollContext *) events[i].data.ptr;
 				int fd = epoll_context->fd;
+
 				int buffer_size = 1024;
 				char read_buffer[buffer_size];
 				memset(read_buffer, 0, buffer_size);
 				int read_size = 0;
 
-				if((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
+				while((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
 					LOG_DEBUG("read success which read content:%s", read_buffer);
 
 					int ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
@@ -129,26 +131,30 @@ int EpollSocket::start_epoll(int port, EpollSocketHandler &socket_handler, int b
 						close_and_release(epollfd, events[i], socket_handler);
 						continue;
 					}
+				}
 
-					events[i].events = EPOLLOUT | EPOLLET;
-					epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
-				} else {
+				if(read_size == 0 || (read_size == -1 && errno != EAGAIN)) {
 					LOG_DEBUG("read_size not normal which size:%d", read_size);
 					close_and_release(epollfd, events[i], socket_handler);
+					continue;
 				}
+
+				events[i].events = EPOLLOUT | EPOLLET;
+				epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
+
 			} else if(events[i].events & EPOLLOUT) { // writeable
 				EpollContext *epoll_context = (EpollContext *) events[i].data.ptr;
 				int fd = epoll_context->fd;
 				LOG_DEBUG("start write data");
 
 				int ret = socket_handler.on_writeable(*epoll_context);
-
-				if(ret == 0) {
-					events[i].events = EPOLLIN | EPOLLET;
-					epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
-				} else {
+				if(ret != 0) {
 					close_and_release(epollfd, events[i], socket_handler);
+					continue;
 				}
+
+				events[i].events = EPOLLIN | EPOLLET;
+				epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
 			} else {
 				LOG_INFO("unkonw events :%d", events[i].events);
 				continue;
