@@ -4,6 +4,7 @@ all:
 	cp src/*.h bin/include/
 	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/http_parser.cpp -o bin/http_parser.o
 	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/http_server.cpp -o bin/http_server.o
+	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/epoll_socket.cpp -o bin/epoll_socket.o
 	ar -rcs libsimpleserver.a bin/*.o
 	mv libsimpleserver.a bin/lib/
 	rm -rf bin/*.o

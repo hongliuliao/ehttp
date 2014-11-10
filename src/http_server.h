@@ -11,6 +11,7 @@
 #include <string>
 #include <map>
 #include "sys/epoll.h"
+#include "epoll_socket.h"
 #include "http_parser.h"
 
 struct HttpMethod {
@@ -29,27 +30,35 @@ struct Resource {
 	method_handler_ptr handler_ptr;
 };
 
-
-class HttpServer {
+class HttpEpollHandler : public EpollSocketHandler {
 private:
 	std::map<std::string, Resource> resource_map;
-
-	int listen_on(int port, int backlog);
-
-	int accept_socket(int sockfd);
-
-	int setNonblocking(int fd);
-
-	void do_use_fd(int fd, int events);
 public:
-
-	int start(int port, int backlog = 10);
-
-	int close_and_remove_epoll_events(int &epollfd, epoll_event &epoll_event);
-
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
 
 	int handle_request(Request &request, Response &response);
+
+	virtual int on_accept(EpollContext &epoll_context) ;
+
+	virtual int on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) ;
+
+	virtual int on_writeable(EpollContext &epoll_context) ;
+
+	virtual int on_close(EpollContext &epoll_context) ;
+};
+
+
+class HttpServer {
+
+private:
+	HttpEpollHandler http_handler;
+
+public:
+
+	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
+
+	int start(int port, int backlog = 10);
+
 };
 
 #endif /* HTTP_SERVER_H_ */

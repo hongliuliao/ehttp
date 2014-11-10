@@ -22,200 +22,22 @@
 #include "http_parser.h"
 #include "http_server.h"
 
-int HttpServer::listen_on(int port, int backlog) {
-	int sockfd; /* listen on sock_fd, new connection on new_fd */
-
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(1);
-	}
-
-	struct sockaddr_in my_addr; /* my address information */
-	memset (&my_addr, 0, sizeof(my_addr));
-	my_addr.sin_family = AF_INET; /* host byte order */
-	my_addr.sin_port = htons(port); /* short, network byte order */
-	my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
-
-	int opt = 1;
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-	if (bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1) {
-		perror("bind");
-		exit(1);
-	}
-
-	if (listen(sockfd, backlog) == -1) {
-		perror("listen");
-		exit(1);
-	}
-
-	LOG_INFO("start HttpServer on port : %d", port);
-	return sockfd;
-}
-
-int HttpServer::accept_socket(int sockfd) {
-	int new_fd;
-	struct sockaddr_in their_addr; /* connector's address information */
-	socklen_t sin_size = sizeof(struct sockaddr_in);
-
-	if ((new_fd = accept(sockfd, (struct sockaddr *) &their_addr, &sin_size)) == -1) {
-		perror("accept");
-		return -1;
-	}
-
-	LOG_DEBUG("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
-	return new_fd;
-}
-
-int HttpServer::setNonblocking(int fd) {
-	int flags;
-
-	if (-1 == (flags = fcntl(fd, F_GETFL, 0)))
-		flags = 0;
-	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-
-}
-
 int HttpServer::start(int port, int backlog) {
 
-	int sockfd = this->listen_on(port, backlog);
-
-	struct epoll_event ev;
-	int epollfd = epoll_create(10);
-	if (epollfd == -1) {
-		perror("epoll_create");
-		exit(EXIT_FAILURE);
-	}
-
-	ev.events = EPOLLIN;
-	ev.data.fd = sockfd;
-	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
-		perror("epoll_ctl: listen_sock");
-		exit(EXIT_FAILURE);
-	}
-
-	epoll_event events[10];
-
-	while(1) {
-		int fds_num = epoll_wait(epollfd, events, 10, -1);
-		if(fds_num == -1) {
-			perror("epoll_pwait");
-			exit(EXIT_FAILURE);
-		}
-
-		for (int i = 0; i < fds_num; i++) {
-			if(events[i].data.fd == sockfd) {
-				int conn_sock = accept_socket(sockfd);
-				setNonblocking(conn_sock);
-				LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
-
-				epoll_event conn_sock_ev;
-				conn_sock_ev.events = EPOLLIN | EPOLLET;
-				conn_sock_ev.data.ptr = new HttpContext(new Request(), new Response(STATUS_OK), conn_sock);
-
-				if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
-				   perror("epoll_ctl: conn_sock");
-				   exit(EXIT_FAILURE);
-				}
-
-			} else if(events[i].events & EPOLLIN ){ // readable
-				HttpContext *hc = (HttpContext *) events[i].data.ptr;
-				int fd = hc->fd;
-				int buffer_size = 1024;
-				char read_buffer[buffer_size];
-				memset(read_buffer, 0, buffer_size);
-				int read_size = 0;
-
-				if((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
-					LOG_DEBUG("read success which read content:%s", read_buffer);
-
-					int parse_part = PARSE_REQ_LINE;
-					HttpContext *http_context = (HttpContext *) events[i].data.ptr;
-					http_context->record_start_time();
-
-					int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, *(http_context->req));
-					if(ret != 0) {
-						LOG_WARN("parse_request error which ret:%d", ret);
-
-						close_and_remove_epoll_events(epollfd, events[i]);
-						continue;
-					}
-					this->handle_request(*(http_context->req), *(http_context->res));
-
-					events[i].events = EPOLLOUT | EPOLLET;
-					epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
-
-				} else {
-					LOG_DEBUG("read_size not normal which size:%d", read_size);
-					close_and_remove_epoll_events(epollfd, events[i]);
-				}
-			} else if(events[i].events & EPOLLOUT) { // writeable
-				HttpContext *hc = (HttpContext *) events[i].data.ptr;
-				int fd = hc->fd;
-				LOG_DEBUG("start write data");
-
-				bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
-				std::string content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
-
-				// write until body response
-				int body_size = content.size();
-				int write_num = 0;
-				const char *p = content.c_str();
-				while(body_size > write_num) {
-					int buf_size = 65536;
-					if(body_size - write_num < buf_size) {
-						buf_size = body_size - write_num;
-					}
-					int one_write = send(fd, p + write_num, buf_size, 0);
-					if(one_write < 0) {
-						perror("send");
-						break;
-					}
-					write_num += one_write;
-				}
-
-				LOG_DEBUG("send complete which write_num:%d, content_size:%d", write_num, content.size());
-
-				hc->print_access_log();
-
-				if(is_keepalive) {
-					events[i].events = EPOLLIN | EPOLLET;
-					epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
-				} else {
-					close_and_remove_epoll_events(epollfd, events[i]);
-				}
-			} else {
-				LOG_INFO("unkonw events :%d", events[i].events);
-				continue;
-			}
-		}
-	}
-
-}
-
-int HttpServer::close_and_remove_epoll_events(int &epollfd, epoll_event &epoll_event) {
-	LOG_INFO("connect close");
-	HttpContext *hc = (HttpContext *) epoll_event.data.ptr;
-	int fd = hc->fd;
-	epoll_event.events = EPOLLIN | EPOLLOUT | EPOLLET;
-	epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
-
-	if(epoll_event.data.ptr != NULL) {
-		delete (HttpContext *)epoll_event.data.ptr;
-		epoll_event.data.ptr = NULL;
-	}
-
-	int ret = close(fd);
-	LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
-	return 0;
+	EpollSocket epoll_socket;
+	epoll_socket.start_epoll(port, http_handler, backlog);
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
+	http_handler.add_mapping(path, handler, method);
+}
+
+void HttpEpollHandler::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
 	Resource resource = {method, handler};
 	resource_map[path] = resource;
 }
 
-int HttpServer::handle_request(Request &req, Response &res) {
+int HttpEpollHandler::handle_request(Request &req, Response &res) {
 	std::string uri = req.get_request_uri();
 	if(this->resource_map.find(uri) == this->resource_map.end()) { // not found
 		res.code_msg = STATUS_NOT_FOUND;
@@ -239,5 +61,68 @@ int HttpServer::handle_request(Request &req, Response &res) {
 		res = handle(req);
 	}
 	LOG_DEBUG("handle response success which code:%d, msg:%s", res.code_msg.status_code, res.code_msg.msg.c_str());
+	return 0;
+}
+
+int HttpEpollHandler::on_accept(EpollContext &epoll_context) {
+	int conn_sock = epoll_context.fd;
+	epoll_context.ptr = new HttpContext(new Request(), new Response(STATUS_OK), conn_sock);
+	return 0;
+}
+
+int HttpEpollHandler::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
+	int parse_part = PARSE_REQ_LINE;
+	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
+	http_context->record_start_time();
+
+	int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, *(http_context->req));
+	if(ret != 0) {
+		LOG_WARN("parse_request error which ret:%d", ret);
+
+		return -1;
+	}
+	this->handle_request(*(http_context->req), *(http_context->res));
+
+	return 0;
+}
+
+int HttpEpollHandler::on_writeable(EpollContext &epoll_context) {
+	int fd = epoll_context.fd;
+	HttpContext *hc = (HttpContext *) epoll_context.ptr;
+	bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
+	std::string content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
+
+	// write until body response
+	int body_size = content.size();
+	int write_num = 0;
+	const char *p = content.c_str();
+	while(body_size > write_num) {
+		int buf_size = 65536;
+		if(body_size - write_num < buf_size) {
+			buf_size = body_size - write_num;
+		}
+		int one_write = send(fd, p + write_num, buf_size, 0);
+		if(one_write < 0) {
+			perror("send");
+			break;
+		}
+		write_num += one_write;
+	}
+
+	LOG_DEBUG("send complete which write_num:%d, content_size:%d", write_num, content.size());
+
+	hc->print_access_log();
+	if(is_keepalive) {
+		return 0;
+	}
+	return 1;
+}
+
+int HttpEpollHandler::on_close(EpollContext &epoll_context) {
+	HttpContext *hc = (HttpContext *) epoll_context.ptr;
+	if(hc != NULL) {
+		delete hc;
+		hc = NULL;
+	}
 	return 0;
 }
