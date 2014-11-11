@@ -124,7 +124,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				int read_size = 0;
 
 				while((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
-					LOG_DEBUG("read success which read content:%s", read_buffer);
+					LOG_DEBUG("read success which read size:%d", read_size);
 
 					int ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
 					if(ret != 0) {
