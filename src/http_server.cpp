@@ -92,27 +92,25 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
 	std::string content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
 
-	// write until body response
-	int body_size = content.size();
-	int write_num = 0;
-	const char *p = content.c_str();
-	while(body_size > write_num) {
-		int buf_size = 65536;
-		if(body_size - write_num < buf_size) {
-			buf_size = body_size - write_num;
+	if(content.size() > MAX_RES_SIZE) { // too large res we will response error
+		if(hc->res != NULL) { // delete old res
+			delete hc->res;
 		}
-		int one_write = send(fd, p + write_num, buf_size, 0);
-		if(one_write < 0) {
-			perror("send");
-			break;
-		}
-		write_num += one_write;
+		hc->res = new Response(STATUS_RESPONSE_TOO_LARGE);
+		content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
 	}
 
-	LOG_DEBUG("send complete which write_num:%d, content_size:%d", write_num, content.size());
+	int body_size = content.size();
+	const char *p = content.c_str();
+	int nwrite = send(fd, p, body_size, 0);
+	if(nwrite < 0) {
+		perror("send");
+	}
+
+	LOG_DEBUG("send complete which write_num:%d, content_size:%d", nwrite, body_size);
 
 	hc->print_access_log();
-	if(is_keepalive) {
+	if(is_keepalive && nwrite > 0) {
 		return 0;
 	}
 	return 1;

@@ -24,6 +24,7 @@ struct CodeMsg {
 const static CodeMsg STATUS_OK = {200, "OK"};
 const static CodeMsg STATUS_NOT_FOUND = {404, "Not Found"};
 const static CodeMsg STATUS_METHOD_NOT_ALLOWED = {405, "Method Not Allowed"};
+const static CodeMsg STATUS_RESPONSE_TOO_LARGE = {513, "Response Entry Too Large"};
 
 const static int PARSE_REQ_LINE = 0;
 const static int PARSE_REQ_HEAD = 1;

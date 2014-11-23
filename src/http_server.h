@@ -23,6 +23,8 @@ const static HttpMethod GET_METHOD = {1, "GET"};
 const static HttpMethod POST_METHOD = {2, "POST"};
 const static HttpMethod ALL_METHOD = {3, "ALL"};
 
+const static int MAX_RES_SIZE = 65536;
+
 typedef Response (*method_handler_ptr)(Request& request );
 
 struct Resource {
