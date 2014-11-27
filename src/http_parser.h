@@ -58,7 +58,7 @@ public:
 	RequestLine line;
 	RequestBody body;
 
-	std::string get_param(std::string &name);
+	std::string get_param(std::string name);
 
 	void add_header(std::string &name, std::string &value);
 

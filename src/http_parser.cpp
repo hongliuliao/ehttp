@@ -45,7 +45,7 @@ std::string RequestLine::get_request_uri() {
 	return uri;
 }
 
-std::string Request::get_param(std::string &name) {
+std::string Request::get_param(std::string name) {
 	if(line.method == "GET") {
 		return line.get_params()[name];
 	}
