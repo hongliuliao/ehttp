@@ -6,8 +6,9 @@
  */
 #include <sstream>
 #include <cstdlib>
-#include <simple_log.h>
-#include <http_parser.h>
+#include <algorithm>
+#include "simple_log.h"
+#include "http_parser.h"
 
 std::map<std::string, std::string> RequestBody::get_params() {
 	return params;
