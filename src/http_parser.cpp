@@ -14,8 +14,7 @@ std::map<std::string, std::string> RequestBody::get_params() {
 	return params;
 }
 
-std::map<std::string, std::string> parse_query_url(std::string query_url) {
-	std::map<std::string, std::string> result;
+int parse_query_url(std::map<std::string, std::string> &result, std::string &query_url) {
 	std::stringstream query_ss(query_url);
 	LOG_DEBUG("start parse_query_url:%s", query_url.c_str());
 
@@ -32,7 +31,7 @@ std::map<std::string, std::string> parse_query_url(std::string query_url) {
 			result[key] = value;
 		}
 	}
-	return result;
+	return 0;
 }
 
 std::map<std::string, std::string> RequestLine::get_params() {
@@ -46,7 +45,7 @@ std::string RequestLine::get_request_uri() {
 	return uri;
 }
 
-std::string Request::get_param(std::string name) {
+std::string Request::get_param(std::string &name) {
 	if(line.method == "GET") {
 		return line.get_params()[name];
 	}
@@ -56,7 +55,7 @@ std::string Request::get_param(std::string name) {
 	return "";
 }
 
-void Request::add_header(std::string name, std::string value) {
+void Request::add_header(std::string &name, std::string &value) {
 	this->headers[name] = value;
 }
 
@@ -72,7 +71,7 @@ Response::Response(CodeMsg status_code) {
 	this->code_msg = status_code;
 }
 
-Response::Response(CodeMsg status_code, Json::Value json_value) {
+Response::Response(CodeMsg status_code, Json::Value &json_value) {
 	Json::FastWriter writer;
 	std::string str_value = writer.write(json_value);
 
@@ -82,11 +81,11 @@ Response::Response(CodeMsg status_code, Json::Value json_value) {
 	this->body = str_value;
 };
 
-void Response::set_head(std::string name, std::string value) {
+void Response::set_head(std::string name, std::string &value) {
 	this->headers[name] = value;
 }
 
-std::string Response::gen_response(std::string http_version, bool is_keepalive) {
+std::string Response::gen_response(std::string &http_version, bool is_keepalive) {
 	std::stringstream res;
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
 	res << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
@@ -113,9 +112,7 @@ std::string Response::gen_response(std::string http_version, bool is_keepalive) 
 	return res.str();
 }
 
-std::map<std::string, std::string> parse_request_url_params(std::string request_url) {
-	std::map<std::string, std::string> result;
-
+int parse_request_url_params(std::map<std::string, std::string> &result, std::string &request_url) {
 	std::stringstream ss(request_url);
 	LOG_DEBUG("start parse params which request_url:%s", request_url.c_str());
 
@@ -125,9 +122,9 @@ std::map<std::string, std::string> parse_request_url_params(std::string request_
 		std::string query_url;
 		std::getline(ss, query_url, '?');
 
-		return parse_query_url(query_url);
+		return parse_query_url(result, query_url);
 	}
-	return result;
+	return 0;
 }
 
 int parse_request_line(const char *line, int size, RequestLine &request_line) {
@@ -141,7 +138,7 @@ int parse_request_line(const char *line, int size, RequestLine &request_line) {
 	if(!ss.good()) {
 		return -1;
 	}
-	request_line.params = parse_request_url_params(request_line.request_url);
+	parse_request_url_params(request_line.params, request_line.request_url);
 
 	std::getline(ss, request_line.http_version, ' ');
 
@@ -195,7 +192,8 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 		if(parse_part == PARSE_REQ_HEAD && !line.empty()) { // read head
 			LOG_DEBUG("start PARSE_REQ_HEAD line:%s", line.c_str());
 
-			std::vector<std::string> parts = split_str(line, ':'); // line like Cache-Control:max-age=0
+			std::vector<std::string> parts;
+			split_str(parts, line, ':'); // line like Cache-Control:max-age=0
 			if(parts.size() < 2) {
 				LOG_WARN("not valid head which line:%s", line.c_str());
 				continue;
@@ -208,7 +206,7 @@ int parse_request(const char *read_buffer, int buffer_size, int read_size, int &
 		if(parse_part == PARSE_REQ_BODY && !line.empty()) {
 			LOG_DEBUG("start PARSE_REQ_BODY line:%s", line.c_str());
 			RequestBody body;
-			body.params = parse_query_url(line);
+			parse_query_url(body.params, line);
 			request.body = body;
 			parse_part = PARSE_REQ_OVER;
 			break;
@@ -238,8 +236,7 @@ static inline std::string &trim(std::string &s) {
         return ltrim(rtrim(s));
 }
 
-std::vector<std::string> split_str(std::string &str, char split_char) {
-	std::vector<std::string> result;
+void split_str(std::vector<std::string> &result, std::string &str, char split_char) {
 
 	std::stringstream ss(str);
 	while(ss.good()) {
@@ -249,5 +246,4 @@ std::vector<std::string> split_str(std::string &str, char split_char) {
 		result.push_back(trim(temp));
 	}
 
-	return result;
 }

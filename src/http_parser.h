@@ -58,9 +58,9 @@ public:
 	RequestLine line;
 	RequestBody body;
 
-	std::string get_param(std::string name);
+	std::string get_param(std::string &name);
 
-	void add_header(std::string name, std::string value);
+	void add_header(std::string &name, std::string &value);
 
 	std::string get_header(std::string name);
 
@@ -76,11 +76,11 @@ public:
 	std::string body;
 
 	Response(CodeMsg status_code);
-	Response(CodeMsg status_code, Json::Value body);
+	Response(CodeMsg status_code, Json::Value &body);
 
-	void set_head(std::string name, std::string value);
+	void set_head(std::string name, std::string &value);
 
-	std::string gen_response(std::string http_version, bool is_keepalive);
+	std::string gen_response(std::string &http_version, bool is_keepalive);
 };
 
 class HttpContext {
@@ -132,18 +132,18 @@ public:
 /**
  * query_url : name=tom&age=3
  */
-std::map<std::string, std::string> parse_query_url(std::string query_url);
+int parse_query_url(std::map<std::string, std::string> &output, std::string &query_url);
 
 /**
  * request_url : /sayhello?name=tom&age=3
  */
-std::map<std::string, std::string> parse_request_url_params(std::string request_url);
+int parse_request_url_params(std::map<std::string, std::string> &output, std::string &request_url);
 
 int parse_request_line(const char *line, int size, RequestLine &request_line);
 
 int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part, Request &request);
 
-std::vector<std::string> split_str(std::string &logContent, char split_char);
+void split_str(std::vector<std::string> &output, std::string &logContent, char split_char);
 
 
 #endif /* HTTP_PARSER_H_ */
