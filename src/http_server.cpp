@@ -117,6 +117,9 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 }
 
 int HttpEpollWatcher::on_close(EpollContext &epoll_context) {
+    if(epoll_context.ptr == NULL) {
+        return 0;
+    }
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
 	if(hc != NULL) {
 		delete hc;

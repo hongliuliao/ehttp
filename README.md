@@ -12,8 +12,8 @@ simple_server
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
 
 ## 性能
- * qps 6000+ (短连接 ab -c 10 -n 6000 localhost:3490/hello)
- * qps 10000+ (长连接 ab -c 10 -n 10000 -k localhost:3490/hello)
+ * qps 12000+ (短连接 ab -c 10 -n 10000 localhost:3490/hello)
+ * qps 16000+ (长连接 ab -c 10 -n 10000 -k localhost:3490/hello)
 
 ## 构建 && 测试
 ```

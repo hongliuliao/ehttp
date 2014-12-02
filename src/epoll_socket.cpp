@@ -165,7 +165,10 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 }
 
 int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
-	LOG_INFO("connect close");
+	if(epoll_event.data.ptr == NULL) {
+	    return 0;
+	}
+    LOG_INFO("connect close");
 
 	EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
 
@@ -175,10 +178,8 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
 	epoll_event.events = EPOLLIN | EPOLLOUT | EPOLLET;
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
 
-	if(epoll_event.data.ptr != NULL) {
-		delete (EpollContext *) epoll_event.data.ptr;
-		epoll_event.data.ptr = NULL;
-	}
+    delete (EpollContext *) epoll_event.data.ptr;
+    epoll_event.data.ptr = NULL;
 
 	int ret = close(fd);
 	LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
