@@ -36,13 +36,17 @@ Response login(Request &request) {
 	return Response(STATUS_OK, root);
 }
 
-int main() {
+int main(int argc, char **args) {
+    if (argc < 2) {
+        LOG_ERROR("usage: ./http_server_test [port]");
+        return -1;
+    }
 	HttpServer http_server;
 
 	http_server.add_mapping("/hello", hello);
 	http_server.add_mapping("/sayhello", sayhello);
 	http_server.add_mapping("/login", login, POST_METHOD);
 
-	http_server.start(3490);
+	http_server.start(atoi(args[0]));
 	return 0;
 }
