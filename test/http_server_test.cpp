@@ -36,6 +36,19 @@ Response login(Request &request) {
 	return Response(STATUS_OK, root);
 }
 
+Response usleep(Request &request) {
+    Json::Value root;
+    std::string sleep_time = request.get_param("usleep");
+    if (sleep_time.empty()) {
+        root["msg"] = "usleep is empty!";
+        return Response(STATUS_OK, root);
+    }
+    usleep(atoi(sleep_time.c_str()));
+    root["code"] = 0;
+    root["msg"] = "success!";
+    return Response(STATUS_OK, root);
+}
+
 int main(int argc, char **args) {
     if (argc < 2) {
         LOG_ERROR("usage: ./http_server_test [port]");
@@ -44,6 +57,7 @@ int main(int argc, char **args) {
 	HttpServer http_server;
 
 	http_server.add_mapping("/hello", hello);
+	http_server.add_mapping("/usleep", usleep);
 	http_server.add_mapping("/sayhello", sayhello);
 	http_server.add_mapping("/login", login, POST_METHOD);
 

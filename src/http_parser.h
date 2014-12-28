@@ -75,39 +75,28 @@ public:
 	CodeMsg code_msg;
 	std::string body;
 
+	Response();
 	Response(CodeMsg status_code);
 	Response(CodeMsg status_code, Json::Value &body);
 
 	void set_head(std::string name, std::string &value);
 
 	std::string gen_response(std::string &http_version, bool is_keepalive);
+
 };
 
 class HttpContext {
 public:
-	Request *req;
-	Response *res;
+	Request req;
+	Response res;
 	int fd;
 	timeval start;
 
-	HttpContext(Request *req, Response *res, int fd) {
-		this->req = &(*req);
-		this->res = &(*res);
+	HttpContext(int fd) {
 		this->fd = fd;
 	}
 
-	~HttpContext() {
-		if(req != NULL) {
-			LOG_DEBUG("start delete request... which ptr:%d", req);
-			delete req;
-			req = NULL;
-		}
-		if(res != NULL) {
-			LOG_DEBUG("start delete response... which ptr:%d", res);
-			delete res;
-			res = NULL;
-		}
-	}
+	~HttpContext() {}
 
 	int record_start_time() {
 		gettimeofday(&start, NULL);
@@ -122,10 +111,15 @@ public:
 	}
 
 	void print_access_log() {
-		std::string http_method = this->req->line.method;
-		std::string request_url = this->req->line.request_url;
+		std::string http_method = this->req.line.method;
+		std::string request_url = this->req.line.request_url;
 		int cost_time = get_cost_time();
-		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
+		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time, res.body.size());
+	}
+
+	void clear() {
+	    req = Request();
+	    res = Response();
 	}
 };
 

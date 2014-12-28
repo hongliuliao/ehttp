@@ -67,6 +67,10 @@ std::string Request::get_request_uri() {
 	return line.get_request_uri();
 }
 
+Response::Response() {
+    this->code_msg = STATUS_OK;
+}
+
 Response::Response(CodeMsg status_code) {
 	this->code_msg = status_code;
 }

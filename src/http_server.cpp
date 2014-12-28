@@ -66,7 +66,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 
 int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 	int conn_sock = epoll_context.fd;
-	epoll_context.ptr = new HttpContext(new Request(), new Response(STATUS_OK), conn_sock);
+	epoll_context.ptr = new HttpContext(conn_sock);
 	return 0;
 }
 
@@ -75,13 +75,13 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
 	http_context->record_start_time();
 
-	int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, *(http_context->req));
+	int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, http_context->req);
 	if(ret != 0) {
 		LOG_WARN("parse_request error which ret:%d", ret);
 
 		return -1;
 	}
-	this->handle_request(*(http_context->req), *(http_context->res));
+	this->handle_request(http_context->req, http_context->res);
 
 	return 0;
 }
@@ -89,15 +89,12 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int fd = epoll_context.fd;
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
-	bool is_keepalive = (strcasecmp(hc->req->get_header("Connection").c_str(), "keep-alive") == 0);
-	std::string content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
+	bool is_keepalive = (strcasecmp(hc->req.get_header("Connection").c_str(), "keep-alive") == 0);
+	std::string content = hc->res.gen_response(hc->req.line.http_version, is_keepalive);
 
 	if(content.size() > MAX_RES_SIZE) { // too large res we will response error
-		if(hc->res != NULL) { // delete old res
-			delete hc->res;
-		}
-		hc->res = new Response(STATUS_RESPONSE_TOO_LARGE);
-		content = hc->res->gen_response(hc->req->line.http_version, is_keepalive);
+		hc->res = Response(STATUS_RESPONSE_TOO_LARGE);
+		content = hc->res.gen_response(hc->req.line.http_version, is_keepalive);
 	}
 
 	int body_size = content.size();
@@ -111,6 +108,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 
 	hc->print_access_log();
 	if(is_keepalive && nwrite > 0) {
+	    hc->clear();
 		return 0;
 	}
 	return 1;
