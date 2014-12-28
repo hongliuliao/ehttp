@@ -122,12 +122,8 @@ std::string Request::get_request_uri() {
 }
 
 
-int Request::parse_request(const char *read_buffer, int buffer_size, int read_size, int &parse_part) {
-    if(read_size == buffer_size) {
-        LOG_WARN("NOT VALID DATA! single line max size is %d", buffer_size);
-        return -1;
-    }
-
+int Request::parse_request(const char *read_buffer, int read_size) {
+    int parse_part = PARSE_REQ_LINE;
     std::string req_str(read_buffer, read_size);
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, req_str.c_str());
 

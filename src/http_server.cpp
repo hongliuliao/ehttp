@@ -71,11 +71,15 @@ int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 }
 
 int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
-	int parse_part = PARSE_REQ_LINE;
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
 	http_context->record_start_time();
 
-	int ret = http_context->req.parse_request(read_buffer, buffer_size, read_size, parse_part);
+	if(read_size == buffer_size) {
+        LOG_WARN("NOT VALID DATA! single line max size is %d", buffer_size);
+        return -1;
+    }
+
+	int ret = http_context->req.parse_request(read_buffer, read_size);
 	if(ret != 0) {
 		LOG_WARN("parse_request error which ret:%d", ret);
 		return -1;

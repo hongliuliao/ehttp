@@ -88,7 +88,7 @@ public:
 
 	std::string get_request_uri();
 
-	int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part);
+	int parse_request(const char *read_buffer, int read_size);
 };
 
 class Response {
