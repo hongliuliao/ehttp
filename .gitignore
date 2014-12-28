@@ -1,6 +1,7 @@
 .cproject
 .project
 .settings
+Debug
 bin
 log
 # Compiled Object files

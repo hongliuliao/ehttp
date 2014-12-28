@@ -31,25 +31,45 @@ const static int PARSE_REQ_HEAD = 1;
 const static int PARSE_REQ_BODY = 2;
 const static int PARSE_REQ_OVER = 3;
 
+class RequestParam {
+private:
+    std::multimap<std::string, std::string> params;
+public:
+
+    std::string get_param(std::string &name);
+
+    void get_params(std::string &name, std::vector<std::string> &params);
+
+    /**
+     * query_url : name=tom&age=3
+     */
+    int parse_query_url(std::string &query_url);
+};
+
 class RequestLine {
 
 public:
 	std::string method;       // like GET/POST
 	std::string request_url;  // like /hello?name=aaa
 	std::string http_version; // like HTTP/1.1
-	std::map<std::string, std::string> params;
 
-	std::map<std::string, std::string> get_params();
 	std::string get_request_uri();
+
+    int parse_request_line(const char *line, int size);
+
+    RequestParam &get_request_param() {
+        return param;
+    }
+private:
+    RequestParam param;
+    /**
+     * request_url : /sayhello?name=tom&age=3
+     */
+    int parse_request_url_params();
 };
 
-class RequestBody {
-public:
-	std::map<std::string, std::string> params;
 
-	std::map<std::string, std::string> get_params();
-
-};
+#define RequestBody RequestParam
 
 class Request {
 private:
@@ -60,11 +80,15 @@ public:
 
 	std::string get_param(std::string name);
 
+	void get_params(std::string &name, std::vector<std::string> &params);
+
 	void add_header(std::string &name, std::string &value);
 
 	std::string get_header(std::string name);
 
 	std::string get_request_uri();
+
+	int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part);
 };
 
 class Response {
@@ -122,20 +146,6 @@ public:
 	    res = Response();
 	}
 };
-
-/**
- * query_url : name=tom&age=3
- */
-int parse_query_url(std::map<std::string, std::string> &output, std::string &query_url);
-
-/**
- * request_url : /sayhello?name=tom&age=3
- */
-int parse_request_url_params(std::map<std::string, std::string> &output, std::string &request_url);
-
-int parse_request_line(const char *line, int size, RequestLine &request_line);
-
-int parse_request(const char *request_buffer, int buffer_size, int read_size, int &parse_part, Request &request);
 
 void split_str(std::vector<std::string> &output, std::string &logContent, char split_char);
 

@@ -75,10 +75,9 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
 	http_context->record_start_time();
 
-	int ret = parse_request(read_buffer, buffer_size, read_size, parse_part, http_context->req);
+	int ret = http_context->req.parse_request(read_buffer, buffer_size, read_size, parse_part);
 	if(ret != 0) {
 		LOG_WARN("parse_request error which ret:%d", ret);
-
 		return -1;
 	}
 	this->handle_request(http_context->req, http_context->res);
