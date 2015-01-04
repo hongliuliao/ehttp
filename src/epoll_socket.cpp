@@ -149,12 +149,16 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				LOG_DEBUG("start write data");
 
 				int ret = socket_handler.on_writeable(*epoll_context);
-				if(ret != 0) {
+				if(ret == 1) {
 					close_and_release(epollfd, events[i], socket_handler);
 					continue;
 				}
 
-				events[i].events = EPOLLIN | EPOLLET;
+				if (ret == 2) {
+				    events[i].events = EPOLLOUT | EPOLLET;
+				} else {
+				    events[i].events = EPOLLIN | EPOLLET;
+				}
 				epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
 			} else {
 				LOG_INFO("unkonw events :%d", events[i].events);

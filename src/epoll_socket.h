@@ -23,7 +23,9 @@ public:
 	virtual int on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) = 0;
 
 	/**
-	 * return : if return value !=0 , we will close the connection
+	 * return :
+	 * if return value == 1, we will close the connection
+	 * if return value == 2, we will continue to write
 	 */
 	virtual int on_writeable(EpollContext &epoll_context) = 0;
 

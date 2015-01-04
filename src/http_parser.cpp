@@ -241,11 +241,13 @@ int Response::gen_response(std::string &http_version, bool is_keepalive) {
 	return 0;
 }
 
-int Response::get_some_response(char *buffer, int buffer_size, std::string &http_version, bool is_keepalive) {
+int Response::get_some_response(char *buffer, int buffer_size, int &read_size, std::string &http_version, bool is_keepalive) {
     if (is_writed == 0) {
         this->gen_response(http_version, is_keepalive);
     }
     response_bytes.read(buffer, buffer_size);
+    read_size = response_bytes.gcount();
+
     is_writed = 1;
 
     if (!response_bytes.eof()) {

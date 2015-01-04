@@ -97,20 +97,21 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	char buffer[WRITE_RES_BUFFER_SIZE];
 	bzero(buffer, WRITE_RES_BUFFER_SIZE);
 
-	int ret = hc->get_res().get_some_response(buffer, WRITE_RES_BUFFER_SIZE, hc->req.line.http_version, is_keepalive);
+	int read_size = 0;
+	int ret = hc->get_res().get_some_response(buffer, WRITE_RES_BUFFER_SIZE, read_size, hc->req.line.http_version, is_keepalive);
 
-	int nwrite = send(fd, buffer, WRITE_RES_BUFFER_SIZE, 0);
+	int nwrite = send(fd, buffer, read_size, 0);
 	if(nwrite < 0) {
 		perror("send");
 	}
 
-	LOG_DEBUG("send complete which write_num:%d", nwrite);
+	LOG_DEBUG("send complete which write_num:%d, read_size:%d", nwrite, read_size);
 
 	hc->print_access_log();
 
 	if (ret == 1) {/* not send over*/
 	    LOG_DEBUG("has big response, we will send part first and send other part later ...");
-	    return 0;
+	    return 2;
 	}
 
 	if(is_keepalive && nwrite > 0) {

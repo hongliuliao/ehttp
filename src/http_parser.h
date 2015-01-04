@@ -113,7 +113,7 @@ public:
 	/**
 	 * return 0: read part, 1: read over, -1:read error
 	 */
-	int get_some_response(char *buffer, int buffer_size, std::string &http_version, bool is_keepalive);
+	int get_some_response(char *buffer, int buffer_size, int &read_size, std::string &http_version, bool is_keepalive);
 
 };
 
@@ -157,8 +157,8 @@ public:
 	    req = Request();
 	    if (res != NULL) {
 	        delete res;
-	        res = NULL;
 	    }
+        res = new Response();
 	}
 
 	Response &get_res() {
