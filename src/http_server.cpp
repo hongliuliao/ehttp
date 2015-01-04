@@ -107,11 +107,16 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 
 	LOG_DEBUG("send complete which write_num:%d, read_size:%d", nwrite, read_size);
 
-	hc->print_access_log();
+	bool print_access_log = true;
 
 	if (ret == 1) {/* not send over*/
+	    print_access_log = false;
 	    LOG_DEBUG("has big response, we will send part first and send other part later ...");
 	    return 2;
+	}
+
+	if (print_access_log) {
+        hc->print_access_log();
 	}
 
 	if(is_keepalive && nwrite > 0) {
