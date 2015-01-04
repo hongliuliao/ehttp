@@ -58,7 +58,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 	}
 	method_handler_ptr handle = resource.handler_ptr;
 	if(handle != NULL) {
-		res = handle(req);
+		handle(req, res);
 	}
 	LOG_DEBUG("handle response success which code:%d, msg:%s", res.code_msg.status_code, res.code_msg.msg.c_str());
 	return 0;
@@ -84,7 +84,7 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 		LOG_WARN("parse_request error which ret:%d", ret);
 		return -1;
 	}
-	this->handle_request(http_context->req, http_context->res);
+	this->handle_request(http_context->req, http_context->get_res());
 
 	return 0;
 }
@@ -93,23 +93,26 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int fd = epoll_context.fd;
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
 	bool is_keepalive = (strcasecmp(hc->req.get_header("Connection").c_str(), "keep-alive") == 0);
-	std::string content = hc->res.gen_response(hc->req.line.http_version, is_keepalive);
 
-	if(content.size() > MAX_RES_SIZE) { // too large res we will response error
-		hc->res = Response(STATUS_RESPONSE_TOO_LARGE);
-		content = hc->res.gen_response(hc->req.line.http_version, is_keepalive);
-	}
+	char buffer[WRITE_RES_BUFFER_SIZE];
+	bzero(buffer, WRITE_RES_BUFFER_SIZE);
 
-	int body_size = content.size();
-	const char *p = content.c_str();
-	int nwrite = send(fd, p, body_size, 0);
+	int ret = hc->get_res().get_some_response(buffer, WRITE_RES_BUFFER_SIZE, hc->req.line.http_version, is_keepalive);
+
+	int nwrite = send(fd, buffer, WRITE_RES_BUFFER_SIZE, 0);
 	if(nwrite < 0) {
 		perror("send");
 	}
 
-	LOG_DEBUG("send complete which write_num:%d, content_size:%d", nwrite, body_size);
+	LOG_DEBUG("send complete which write_num:%d", nwrite);
 
 	hc->print_access_log();
+
+	if (ret == 1) {/* not send over*/
+	    LOG_DEBUG("has big response, we will send part first and send other part later ...");
+	    return 0;
+	}
+
 	if(is_keepalive && nwrite > 0) {
 	    hc->clear();
 		return 0;

@@ -9,6 +9,7 @@
 #define HTTP_PARSER_H_
 
 #include <string>
+#include <sstream>
 #include <map>
 #include <vector>
 #include <sys/time.h>
@@ -24,7 +25,6 @@ struct CodeMsg {
 const static CodeMsg STATUS_OK = {200, "OK"};
 const static CodeMsg STATUS_NOT_FOUND = {404, "Not Found"};
 const static CodeMsg STATUS_METHOD_NOT_ALLOWED = {405, "Method Not Allowed"};
-const static CodeMsg STATUS_RESPONSE_TOO_LARGE = {513, "Response Entry Too Large"};
 
 const static int PARSE_REQ_LINE = 0;
 const static int PARSE_REQ_HEAD = 1;
@@ -94,33 +94,45 @@ public:
 class Response {
 private:
 	std::map<std::string, std::string> headers;
+	int is_writed;
+	std::stringstream response_bytes;
 
 public:
 	CodeMsg code_msg;
 	std::string body;
 
-	Response();
-	Response(CodeMsg status_code);
+	Response(CodeMsg status_code = STATUS_OK);
 	Response(CodeMsg status_code, Json::Value &body);
 
 	void set_head(std::string name, std::string &value);
 
-	std::string gen_response(std::string &http_version, bool is_keepalive);
+	void set_body(Json::Value &body);
+
+	int gen_response(std::string &http_version, bool is_keepalive);
+
+	/**
+	 * return 0: read part, 1: read over, -1:read error
+	 */
+	int get_some_response(char *buffer, int buffer_size, std::string &http_version, bool is_keepalive);
 
 };
 
 class HttpContext {
+private:
+	Response *res;
 public:
 	Request req;
-	Response res;
 	int fd;
 	timeval start;
 
 	HttpContext(int fd) {
 		this->fd = fd;
+		res = new Response();
 	}
 
-	~HttpContext() {}
+	~HttpContext() {
+	    clear();
+	}
 
 	int record_start_time() {
 		gettimeofday(&start, NULL);
@@ -138,13 +150,21 @@ public:
 		std::string http_method = this->req.line.method;
 		std::string request_url = this->req.line.request_url;
 		int cost_time = get_cost_time();
-		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res.code_msg.status_code, cost_time, res.body.size());
+		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
 	}
 
 	void clear() {
 	    req = Request();
-	    res = Response();
+	    if (res != NULL) {
+	        delete res;
+	        res = NULL;
+	    }
 	}
+
+	Response &get_res() {
+	    return *res;
+	}
+
 };
 
 void split_str(std::vector<std::string> &output, std::string &logContent, char split_char);

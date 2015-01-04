@@ -9,23 +9,23 @@
 #include "simple_log.h"
 #include "http_server.h"
 
-Response hello(Request &request) {
+void hello(Request &request, Response &response) {
 	Json::Value root;
 	root["hello"] = "world";
-	return Response(STATUS_OK, root);
+	response.set_body(root);
 }
 
-Response sayhello(Request &request) {
+void sayhello(Request &request, Response &response) {
 	std::string name = request.get_param("name");
 	std::string age = request.get_param("age");
 
 	Json::Value root;
 	root["name"] = name;
 	root["age"] = atoi(age.c_str());
-	return Response(STATUS_OK, root);
+	response.set_body(root);
 }
 
-Response login(Request &request) {
+void login(Request &request, Response &response) {
 	std::string name = request.get_param("name");
 	std::string pwd = request.get_param("pwd");
 
@@ -33,20 +33,21 @@ Response login(Request &request) {
 	Json::Value root;
 	root["code"] = 0;
 	root["msg"] = "login success!";
-	return Response(STATUS_OK, root);
+	response.set_body(root);
 }
 
-Response usleep(Request &request) {
+void usleep(Request &request, Response &response) {
     Json::Value root;
     std::string sleep_time = request.get_param("usleep");
     if (sleep_time.empty()) {
         root["msg"] = "usleep is empty!";
-        return Response(STATUS_OK, root);
+        response.set_body(root);
+        return;
     }
     usleep(atoi(sleep_time.c_str()));
     root["code"] = 0;
     root["msg"] = "success!";
-    return Response(STATUS_OK, root);
+    response.set_body(root);
 }
 
 int main(int argc, char **args) {

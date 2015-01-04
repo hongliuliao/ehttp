@@ -190,12 +190,9 @@ int Request::parse_request(const char *read_buffer, int read_size) {
     return ret;
 }
 
-Response::Response() {
-    this->code_msg = STATUS_OK;
-}
-
 Response::Response(CodeMsg status_code) {
 	this->code_msg = status_code;
+	this->is_writed = 0;
 }
 
 Response::Response(CodeMsg status_code, Json::Value &json_value) {
@@ -204,41 +201,58 @@ Response::Response(CodeMsg status_code, Json::Value &json_value) {
 
 	LOG_DEBUG("get json value in res : %s, code:%d, msg:%s", str_value.c_str(), status_code.status_code, status_code.msg.c_str());
 
-	this->code_msg = status_code;
 	this->body = str_value;
+	this->is_writed = 0;
 };
 
 void Response::set_head(std::string name, std::string &value) {
 	this->headers[name] = value;
 }
 
-std::string Response::gen_response(std::string &http_version, bool is_keepalive) {
-	std::stringstream res;
+void Response::set_body(Json::Value &body) {
+    Json::FastWriter writer;
+    std::string str_value = writer.write(body);
+    this->body = str_value;
+}
+
+int Response::gen_response(std::string &http_version, bool is_keepalive) {
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
-	res << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
-	res << "Server: SimpleServer/0.1" << "\r\n";
+	response_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
+	response_bytes << "Server: SimpleServer/0.1" << "\r\n";
 	if(headers.find("Content-Type") == headers.end()) {
-		res << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+		response_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
 	}
-	res << "Content-Length: " << body.size() << "\r\n";
+	response_bytes << "Content-Length: " << body.size() << "\r\n";
 
 	std::string con_status = "Connection: close";
 	if(is_keepalive) {
 		con_status = "Connection: Keep-Alive";
 	}
-	res << con_status << "\r\n";
+	response_bytes << con_status << "\r\n";
 
 	for (std::map<std::string, std::string>::iterator it=headers.begin(); it!=headers.end(); ++it) {
-		res << it->first << ": " << it->second << "\r\n";
+		response_bytes << it->first << ": " << it->second << "\r\n";
 	}
 	// header end
-	res << "\r\n";
-	res << body;
+	response_bytes << "\r\n";
+	response_bytes << body;
 
-	LOG_DEBUG("gen response context:%s", res.str().c_str());
-	return res.str();
+	LOG_DEBUG("gen response context:%s", response_bytes.str().c_str());
+	return 0;
 }
 
+int Response::get_some_response(char *buffer, int buffer_size, std::string &http_version, bool is_keepalive) {
+    if (is_writed == 0) {
+        this->gen_response(http_version, is_keepalive);
+    }
+    response_bytes.read(buffer, buffer_size);
+    is_writed = 1;
+
+    if (!response_bytes.eof()) {
+        return 1;
+    }
+    return 0;
+}
 
 
 static inline std::string &ltrim(std::string &s) {
