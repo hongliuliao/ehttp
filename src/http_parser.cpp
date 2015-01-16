@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "simple_log.h"
 #include "http_parser.h"
+#include "curl/curl.h"
 
 std::string RequestParam::get_param(std::string &name) {
     std::multimap<std::string, std::string>::iterator i = this->params.find(name);
@@ -98,6 +99,17 @@ std::string Request::get_param(std::string name) {
 		return body.get_param(name);
 	}
 	return "";
+}
+
+std::string Request::get_unescape_param(std::string name) {
+    std::string param = this->get_param(name);
+    if (param.empty()) {
+        return param;
+    }
+    char *escape_content = curl_unescape(param.c_str(), param.size());
+    std::string unescape_param(escape_content);
+    delete escape_content;
+    return unescape_param;
 }
 
 void Request::get_params(std::string &name, std::vector<std::string> &params) {

@@ -80,6 +80,8 @@ public:
 
 	std::string get_param(std::string name);
 
+	std::string get_unescape_param(std::string name);
+
 	void get_params(std::string &name, std::vector<std::string> &params);
 
 	void add_header(std::string &name, std::string &value);
