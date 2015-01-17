@@ -229,47 +229,47 @@ void Response::set_body(Json::Value &body) {
 
 int Response::gen_response(std::string &http_version, bool is_keepalive) {
 	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
-	response_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
-	response_bytes << "Server: SimpleServer/0.1" << "\r\n";
+	res_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
+	res_bytes << "Server: SimpleServer/0.1" << "\r\n";
 	if(headers.find("Content-Type") == headers.end()) {
-		response_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+		res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
 	}
-	response_bytes << "Content-Length: " << body.size() << "\r\n";
+	res_bytes << "Content-Length: " << body.size() << "\r\n";
 
 	std::string con_status = "Connection: close";
 	if(is_keepalive) {
 		con_status = "Connection: Keep-Alive";
 	}
-	response_bytes << con_status << "\r\n";
+	res_bytes << con_status << "\r\n";
 
 	for (std::map<std::string, std::string>::iterator it=headers.begin(); it!=headers.end(); ++it) {
-		response_bytes << it->first << ": " << it->second << "\r\n";
+		res_bytes << it->first << ": " << it->second << "\r\n";
 	}
 	// header end
-	response_bytes << "\r\n";
-	response_bytes << body;
+	res_bytes << "\r\n";
+	res_bytes << body;
 
-	LOG_DEBUG("gen response context:%s", response_bytes.str().c_str());
+	LOG_DEBUG("gen response context:%s", res_bytes.str().c_str());
 	return 0;
 }
 
 int Response::readsome(char *buffer, int buffer_size, int &read_size) {
-    response_bytes.read(buffer, buffer_size);
-    read_size = response_bytes.gcount();
+    res_bytes.read(buffer, buffer_size);
+    read_size = res_bytes.gcount();
 
-    if (!response_bytes.eof()) {
+    if (!res_bytes.eof()) {
         return 1;
     }
     return 0;
 }
 
 int Response::rollback(int num) {
-    if (response_bytes.eof()) {
-        response_bytes.clear();
+    if (res_bytes.eof()) {
+        res_bytes.clear();
     }
-    int rb_pos = (int) response_bytes.tellg() - num;
-    response_bytes.seekg(rb_pos);
-    return response_bytes.good() ? 0 : -1;
+    int rb_pos = (int) res_bytes.tellg() - num;
+    res_bytes.seekg(rb_pos);
+    return res_bytes.good() ? 0 : -1;
 }
 
 static inline std::string &ltrim(std::string &s) {

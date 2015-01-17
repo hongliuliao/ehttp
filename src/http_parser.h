@@ -96,7 +96,7 @@ public:
 class Response {
 private:
 	std::map<std::string, std::string> headers;
-	std::stringstream response_bytes;
+	std::stringstream res_bytes;
 
 public:
 	bool is_writed;
