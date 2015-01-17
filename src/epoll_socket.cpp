@@ -121,21 +121,16 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				int buffer_size = SS_READ_BUFFER_SIZE;
 				char read_buffer[buffer_size];
 				memset(read_buffer, 0, buffer_size);
-				int read_size = 0;
 
-				while((read_size = recv(fd, read_buffer, buffer_size, 0)) > 0) {
+				int read_size = recv(fd, read_buffer, buffer_size, 0);
+
+				int handle_ret = 0;
+                if(read_size > 0) {
 					LOG_DEBUG("read success which read size:%d", read_size);
-
-					int ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
-					if(ret != 0) {
-						close_and_release(epollfd, events[i], socket_handler);
-						continue;
-					}
-					memset(read_buffer, 0, buffer_size); // reset buffer for next read
+					handle_ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
 				}
 
-				if(read_size == 0 /* connect close*/ || (read_size == -1 && errno != EAGAIN) /* io error*/) {
-					LOG_DEBUG("read_size not normal which size:%d", read_size);
+				if(read_size <= 0 /* connect close or io error*/ || handle_ret != 0) {
 					close_and_release(epollfd, events[i], socket_handler);
 					continue;
 				}
