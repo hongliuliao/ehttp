@@ -75,7 +75,7 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 	http_context->record_start_time();
 
 	if(read_size == buffer_size) {
-        LOG_WARN("NOT VALID DATA! single line max size is %d", buffer_size);
+        LOG_WARN("NOT VALID DATA! single request max size is %d", buffer_size);
         return -1;
     }
 
