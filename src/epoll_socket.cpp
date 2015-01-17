@@ -118,7 +118,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				EpollContext *epoll_context = (EpollContext *) events[i].data.ptr;
 				int fd = epoll_context->fd;
 
-				int buffer_size = 1024;
+				int buffer_size = SS_READ_BUFFER_SIZE;
 				char read_buffer[buffer_size];
 				memset(read_buffer, 0, buffer_size);
 				int read_size = 0;
@@ -149,12 +149,12 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				LOG_DEBUG("start write data");
 
 				int ret = socket_handler.on_writeable(*epoll_context);
-				if(ret == 1) {
+				if(ret == WRITE_CONN_CLOSE) {
 					close_and_release(epollfd, events[i], socket_handler);
 					continue;
 				}
 
-				if (ret == 2) {
+				if (ret == WRITE_CONN_CONTINUE) {
 				    events[i].events = EPOLLOUT | EPOLLET;
 				} else {
 				    events[i].events = EPOLLIN | EPOLLET;

@@ -23,8 +23,6 @@ const static HttpMethod GET_METHOD = {1, "GET"};
 const static HttpMethod POST_METHOD = {2, "POST"};
 const static HttpMethod ALL_METHOD = {3, "ALL"};
 
-const static int WRITE_RES_BUFFER_SIZE = 10240;
-
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 
 struct Resource {

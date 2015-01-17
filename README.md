@@ -74,12 +74,6 @@ int main() {
 
 ```
 
-## 编译
-```
-g++ -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_server_test.cpp dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a bin/lib/libsimpleserver.a -o bin/http_server_test
-	
-```
-
 ## 运行
 ```
 liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login" -d "name=tom&pwd=3"

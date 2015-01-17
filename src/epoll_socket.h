@@ -9,6 +9,12 @@
 #define TCP_EPOLL_H_
 
 #include "sys/epoll.h"
+#define SS_WRITE_BUFFER_SIZE 4096
+#define SS_READ_BUFFER_SIZE 4096
+
+#define WRITE_CONN_ALIVE 0
+#define WRITE_CONN_CLOSE 1
+#define WRITE_CONN_CONTINUE 2
 
 class EpollContext {
 public:

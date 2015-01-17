@@ -96,10 +96,10 @@ public:
 class Response {
 private:
 	std::map<std::string, std::string> headers;
-	int is_writed;
 	std::stringstream response_bytes;
 
 public:
+	bool is_writed;
 	CodeMsg code_msg;
 	std::string body;
 
@@ -115,7 +115,12 @@ public:
 	/**
 	 * return 0: read part, 1: read over, -1:read error
 	 */
-	int get_some_response(char *buffer, int buffer_size, int &read_size, std::string &http_version, bool is_keepalive);
+	int readsome(char *buffer, int buffer_size, int &read_size);
+
+	/**
+	 * rollback num bytes in response bytes
+	 */
+	int rollback(int num);
 
 };
 

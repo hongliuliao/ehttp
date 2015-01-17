@@ -23,9 +23,9 @@
 #include "http_server.h"
 
 int HttpServer::start(int port, int backlog) {
-
 	EpollSocket epoll_socket;
 	epoll_socket.start_epoll(port, http_handler, backlog);
+	return 0;
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
@@ -92,19 +92,30 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int fd = epoll_context.fd;
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
+	Response &res = hc->get_res();
 	bool is_keepalive = (strcasecmp(hc->req.get_header("Connection").c_str(), "keep-alive") == 0);
 
-	char buffer[WRITE_RES_BUFFER_SIZE];
-	bzero(buffer, WRITE_RES_BUFFER_SIZE);
-
-	int read_size = 0;
-	int ret = hc->get_res().get_some_response(buffer, WRITE_RES_BUFFER_SIZE, read_size, hc->req.line.http_version, is_keepalive);
-
-	int nwrite = send(fd, buffer, read_size, 0);
-	if(nwrite < 0) {
-		perror("send");
+	if (!res.is_writed) {
+	    res.gen_response(hc->req.line.http_version, is_keepalive);
+	    res.is_writed = true;
 	}
 
+	char buffer[SS_WRITE_BUFFER_SIZE];
+	bzero(buffer, SS_WRITE_BUFFER_SIZE);
+	int read_size = 0;
+
+	// 1. read some response bytes
+	int ret = res.readsome(buffer, SS_WRITE_BUFFER_SIZE, read_size);
+	// 2. write bytes to socket
+	int nwrite = send(fd, buffer, read_size, 0);
+	if(nwrite < 0) {
+		perror("send fail!");
+		return WRITE_CONN_CLOSE;
+	}
+	// 3. when ont write all buffer, we will rollback write index
+	if (nwrite < read_size) {
+	    res.rollback(read_size - nwrite);
+	}
 	LOG_DEBUG("send complete which write_num:%d, read_size:%d", nwrite, read_size);
 
 	bool print_access_log = true;
@@ -112,7 +123,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	if (ret == 1) {/* not send over*/
 	    print_access_log = false;
 	    LOG_DEBUG("has big response, we will send part first and send other part later ...");
-	    return 2;
+	    return WRITE_CONN_CONTINUE;
 	}
 
 	if (print_access_log) {
@@ -121,9 +132,9 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 
 	if(is_keepalive && nwrite > 0) {
 	    hc->clear();
-		return 0;
+		return WRITE_CONN_ALIVE;
 	}
-	return 1;
+	return WRITE_CONN_CLOSE;
 }
 
 int HttpEpollWatcher::on_close(EpollContext &epoll_context) {

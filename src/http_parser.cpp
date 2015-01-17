@@ -253,14 +253,9 @@ int Response::gen_response(std::string &http_version, bool is_keepalive) {
 	return 0;
 }
 
-int Response::get_some_response(char *buffer, int buffer_size, int &read_size, std::string &http_version, bool is_keepalive) {
-    if (is_writed == 0) {
-        this->gen_response(http_version, is_keepalive);
-    }
+int Response::readsome(char *buffer, int buffer_size, int &read_size) {
     response_bytes.read(buffer, buffer_size);
     read_size = response_bytes.gcount();
-
-    is_writed = 1;
 
     if (!response_bytes.eof()) {
         return 1;
@@ -268,6 +263,14 @@ int Response::get_some_response(char *buffer, int buffer_size, int &read_size, s
     return 0;
 }
 
+int Response::rollback(int num) {
+    if (response_bytes.eof()) {
+        response_bytes.clear();
+    }
+    int rb_pos = (int) response_bytes.tellg() - num;
+    response_bytes.seekg(rb_pos);
+    return response_bytes.good() ? 0 : -1;
+}
 
 static inline std::string &ltrim(std::string &s) {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
