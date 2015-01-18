@@ -17,7 +17,7 @@ simple_server
 
 ## 构建 && 测试
 ```
- make && make test && ./bin/http_server_test 
+ make && make test && ./bin/http_server_test 3490
  curl "localhost:3490/hello"
 ```
 
