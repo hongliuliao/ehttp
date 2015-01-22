@@ -4,6 +4,7 @@
  *  Created on: Nov 10, 2014
  *      Author: liao
  */
+#include <cstdlib>
 #include <cerrno>
 #include <netinet/in.h>
 #include <arpa/inet.h>
