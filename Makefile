@@ -1,3 +1,5 @@
+.PHONY: all test clean
+
 all:
 	mkdir -p bin/include
 	mkdir -p bin/lib
@@ -14,3 +16,4 @@ test: test/http_server_test.cpp test/http_parser_test.cpp
 	
 clean:
 	rm -rf bin/*
+
