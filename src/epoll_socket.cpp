@@ -5,6 +5,7 @@
  *      Author: liao
  */
 #include <cstdlib>
+#include <cstdio>
 #include <cerrno>
 #include <netinet/in.h>
 #include <arpa/inet.h>
