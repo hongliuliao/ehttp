@@ -9,31 +9,25 @@
 #include "simple_log.h"
 #include "http_server.h"
 
-void hello(Request &request, Response &response) {
-	Json::Value root;
+void hello(Request &request, Json::Value &root) {
 	root["hello"] = "world";
-	response.set_body(root);
 }
 
-void sayhello(Request &request, Response &response) {
+void sayhello(Request &request, Json::Value &root) {
 	std::string name = request.get_param("name");
 	std::string age = request.get_param("age");
 
-	Json::Value root;
 	root["name"] = name;
 	root["age"] = atoi(age.c_str());
-	response.set_body(root);
 }
 
-void login(Request &request, Response &response) {
+void login(Request &request, Json::Value &root) {
 	std::string name = request.get_param("name");
 	std::string pwd = request.get_param("pwd");
 
 	LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
-	Json::Value root;
 	root["code"] = 0;
 	root["msg"] = "login success!";
-	response.set_body(root);
 }
 
 void usleep(Request &request, Response &response) {

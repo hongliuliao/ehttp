@@ -32,9 +32,18 @@ void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpM
 	http_handler.add_mapping(path, handler, method);
 }
 
+void HttpServer::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
+    http_handler.add_mapping(path, handler, method);
+}
+
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
-	Resource resource = {method, handler};
+	Resource resource = {method, handler, NULL};
 	resource_map[path] = resource;
+}
+
+void HttpEpollWatcher::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
+    Resource resource = {method, NULL, handler};
+    resource_map[path] = resource;
 }
 
 int HttpEpollWatcher::handle_request(Request &req, Response &res) {
@@ -56,9 +65,13 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 		LOG_INFO("not allow method, allowed:%s, request method:%s", method.name.c_str(), req.line.method.c_str());
 		return 0;
 	}
-	method_handler_ptr handle = resource.handler_ptr;
-	if(handle != NULL) {
-		handle(req, res);
+
+	if(resource.json_ptr != NULL) {
+	    Json::Value root;
+	    resource.json_ptr(req, root);
+		res.set_body(root);
+	} else if (resource.handler_ptr != NULL) {
+	    resource.handler_ptr(req, res);
 	}
 	LOG_DEBUG("handle response success which code:%d, msg:%s", res.code_msg.status_code, res.code_msg.msg.c_str());
 	return 0;

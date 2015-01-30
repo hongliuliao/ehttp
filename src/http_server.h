@@ -11,6 +11,7 @@
 #include <string>
 #include <map>
 #include "sys/epoll.h"
+#include "json/json.h"
 #include "epoll_socket.h"
 #include "http_parser.h"
 
@@ -24,10 +25,12 @@ const static HttpMethod POST_METHOD = {2, "POST"};
 const static HttpMethod ALL_METHOD = {3, "ALL"};
 
 typedef void (*method_handler_ptr)(Request& request, Response &response);
+typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
 
 struct Resource {
 	HttpMethod method;
 	method_handler_ptr handler_ptr;
+	json_handler_ptr json_ptr;
 };
 
 class HttpEpollWatcher : public EpollSocketWatcher {
@@ -35,6 +38,8 @@ private:
 	std::map<std::string, Resource> resource_map;
 public:
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
+
+	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);
 
 	int handle_request(Request &request, Response &response);
 
@@ -56,6 +61,8 @@ private:
 public:
 
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
+
+	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);
 
 	int start(int port, int backlog = 10);
 
