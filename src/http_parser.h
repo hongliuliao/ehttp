@@ -138,7 +138,10 @@ public:
 	}
 
 	~HttpContext() {
-	    clear();
+	    if (res != NULL) {
+            delete res;
+            res = NULL;
+        }
 	}
 
 	int record_start_time() {
