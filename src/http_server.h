@@ -37,6 +37,8 @@ class HttpEpollWatcher : public EpollSocketWatcher {
 private:
 	std::map<std::string, Resource> resource_map;
 public:
+	~HttpEpollWatcher() {}
+
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
 
 	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);

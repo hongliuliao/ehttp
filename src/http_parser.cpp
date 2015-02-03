@@ -207,16 +207,6 @@ Response::Response(CodeMsg status_code) {
 	this->is_writed = 0;
 }
 
-Response::Response(CodeMsg status_code, Json::Value &json_value) {
-	Json::FastWriter writer;
-	std::string str_value = writer.write(json_value);
-
-	LOG_DEBUG("get json value in res : %s, code:%d, msg:%s", str_value.c_str(), status_code.status_code, status_code.msg.c_str());
-
-	this->body = str_value;
-	this->is_writed = 0;
-};
-
 void Response::set_head(std::string name, std::string &value) {
 	this->headers[name] = value;
 }

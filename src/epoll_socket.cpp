@@ -184,5 +184,5 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
 
 	int ret = close(fd);
 	LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
-	return 0;
+	return ret;
 }
