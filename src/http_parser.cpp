@@ -108,7 +108,7 @@ std::string Request::get_unescape_param(std::string name) {
     }
     char *escape_content = curl_unescape(param.c_str(), param.size());
     std::string unescape_param(escape_content);
-    delete escape_content;
+    curl_free(escape_content);
     return unescape_param;
 }
 
