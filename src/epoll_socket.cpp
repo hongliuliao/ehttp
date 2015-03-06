@@ -5,6 +5,7 @@
  *      Author: liao
  */
 #include <cstdlib>
+#include <climits>
 #include <cstdio>
 #include <cerrno>
 #include <netinet/in.h>
@@ -74,7 +75,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 	int sockfd = this->listen_on(port, backlog);
 
 	struct epoll_event ev;
-	int epollfd = epoll_create(10);
+	int epollfd = epoll_create(1024);
 	if (epollfd == -1) {
 		perror("epoll_create");
 		exit(EXIT_FAILURE);
@@ -90,7 +91,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 	epoll_event events[10];
 
 	while(1) {
-		int fds_num = epoll_wait(epollfd, events, 10, -1);
+		int fds_num = epoll_wait(epollfd, events, INT_MAX, -1);
 		if(fds_num == -1) {
 			perror("epoll_pwait");
 			exit(EXIT_FAILURE);
