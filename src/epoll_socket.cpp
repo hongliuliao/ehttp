@@ -91,7 +91,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 	epoll_event events[10];
 
 	while(1) {
-		int fds_num = epoll_wait(epollfd, events, INT_MAX, -1);
+		int fds_num = epoll_wait(epollfd, events, backlog, -1); // FIXME add a arg to controll __maxevents
 		if(fds_num == -1) {
 			perror("epoll_pwait");
 			exit(EXIT_FAILURE);
