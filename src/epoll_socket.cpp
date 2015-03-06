@@ -88,10 +88,11 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 		exit(EXIT_FAILURE);
 	}
 
-	epoll_event events[10];
+	int max_events = backlog; // FIXME add a arg to controll __maxevents
+	epoll_event *events = new epoll_event[max_events];
 
 	while(1) {
-		int fds_num = epoll_wait(epollfd, events, backlog, -1); // FIXME add a arg to controll __maxevents
+		int fds_num = epoll_wait(epollfd, events, max_events, -1);
 		if(fds_num == -1) {
 			perror("epoll_pwait");
 			exit(EXIT_FAILURE);
@@ -163,6 +164,11 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 				continue;
 			}
 		}
+	}
+
+	if (events != NULL) {
+	    delete events;
+	    events = NULL;
 	}
 }
 
