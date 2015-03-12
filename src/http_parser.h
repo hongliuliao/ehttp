@@ -60,6 +60,18 @@ public:
     RequestParam &get_request_param() {
         return param;
     }
+
+    std::string to_string() {
+        std::string ret = "method:";
+        ret += method;
+        ret += ",";
+        ret += "request_url:";
+        ret += request_url;
+        ret += ",";
+        ret += "http_version:";
+        ret += http_version;
+        return ret;
+    }
 private:
     RequestParam param;
     /**
@@ -152,7 +164,7 @@ public:
 	int get_cost_time() {
 		timeval end;
 		gettimeofday(&end, NULL);
-		int cost_time = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
+		int cost_time = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
 		return cost_time;
 	}
 
@@ -160,7 +172,7 @@ public:
 		std::string http_method = this->req.line.method;
 		std::string request_url = this->req.line.request_url;
 		int cost_time = get_cost_time();
-		LOG_INFO("access_log %s %s status_code:%d cost_time:%d ms, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
+		LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
 	}
 
 	void clear() {

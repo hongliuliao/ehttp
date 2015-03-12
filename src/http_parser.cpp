@@ -55,14 +55,17 @@ std::string RequestLine::get_request_uri() {
 }
 
 int RequestLine::parse_request_line(const char *line, int size) {
+    std::string line_str(line, size);
     std::stringstream ss(std::string(line, size));
 
     std::getline(ss, method, ' ');
     if(!ss.good()) {
+        LOG_ERROR("GET method error which line:%s", line_str.c_str());
         return -1;
     }
     std::getline(ss, request_url, ' ');
     if(!ss.good()) {
+        LOG_ERROR("GET request_url error which line:%s", line_str.c_str());
         return -1;
     }
     int ret = parse_request_url_params();
@@ -158,7 +161,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
             LOG_DEBUG("start parse req_line line:%s", line.c_str());
             ret = this->line.parse_request_line(line.c_str(), line.size() - 1);
             if(ret != 0) {
-                LOG_INFO("parse request line error!");
+                LOG_ERROR("parse request line error!");
                 return -1;
             }
             parse_part = PARSE_REQ_HEAD;
@@ -196,7 +199,11 @@ int Request::parse_request(const char *read_buffer, int read_size) {
     }
 
     if(parse_part != PARSE_REQ_OVER) {
-        LOG_DEBUG("parse request no over parse_part:%d", parse_part);
+        std::string line_info = "unknown";
+        if (parse_part > PARSE_REQ_LINE) {
+            line_info = this->line.to_string();
+        }
+        LOG_ERROR("parse request no over parse_part:%d, line_info:%s", parse_part, line_info.c_str());
         return 1; // to be continue
     }
     return ret;

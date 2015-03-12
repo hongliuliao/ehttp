@@ -125,7 +125,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 		perror("send fail!");
 		return WRITE_CONN_CLOSE;
 	}
-	// 3. when ont write all buffer, we will rollback write index
+	// 3. when not write all buffer, we will rollback write index
 	if (nwrite < read_size) {
 	    res.rollback(read_size - nwrite);
 	}
