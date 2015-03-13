@@ -66,7 +66,7 @@ public:
 
 	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);
 
-	int start(int port, int backlog = 10);
+	int start(int port, int backlog = 10, int max_events = 1000);
 
 };
 

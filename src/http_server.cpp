@@ -22,9 +22,9 @@
 #include "http_parser.h"
 #include "http_server.h"
 
-int HttpServer::start(int port, int backlog) {
+int HttpServer::start(int port, int backlog, int max_events) {
 	EpollSocket epoll_socket;
-	epoll_socket.start_epoll(port, http_handler, backlog);
+	epoll_socket.start_epoll(port, http_handler, backlog, max_events);
 	return 0;
 }
 

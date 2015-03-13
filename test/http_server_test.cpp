@@ -56,6 +56,10 @@ int main(int argc, char **args) {
 	http_server.add_mapping("/sayhello", sayhello);
 	http_server.add_mapping("/login", login, POST_METHOD);
 
-	http_server.start(atoi(args[1]), 100000);
+	int port = atoi(args[1]);
+	int backlog = 1000;
+	int max_events = 100000;
+
+	http_server.start(port, backlog, max_events);
 	return 0;
 }

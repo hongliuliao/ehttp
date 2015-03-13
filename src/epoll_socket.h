@@ -51,7 +51,7 @@ private:
 
 public:
 
-	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog = 10);
+	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
 };
 

@@ -71,7 +71,7 @@ int EpollSocket::accept_socket(int sockfd) {
     return new_fd;
 }
 
-int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog) {
+int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     int sockfd = this->listen_on(port, backlog);
 
     struct epoll_event ev;
@@ -88,7 +88,6 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         exit(EXIT_FAILURE);
     }
 
-    int max_events = backlog; // FIXME add a arg to controll __maxevents
     epoll_event *events = new epoll_event[max_events];
 
     while(1) {
