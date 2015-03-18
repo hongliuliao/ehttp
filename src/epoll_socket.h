@@ -20,6 +20,7 @@ class EpollContext {
 public:
 	void *ptr;
 	int fd;
+	std::string client_ip;
 };
 
 class EpollSocketWatcher {
@@ -43,7 +44,7 @@ private:
 
 	int setNonblocking(int fd);
 
-	int accept_socket(int sockfd);
+	int accept_socket(int sockfd, std::string &client_ip);
 
 	int listen_on(int port, int backlog);
 

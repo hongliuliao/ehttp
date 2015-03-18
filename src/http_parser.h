@@ -168,11 +168,13 @@ public:
 		return cost_time;
 	}
 
-	void print_access_log() {
+	void print_access_log(std::string &client_ip) {
 		std::string http_method = this->req.line.method;
 		std::string request_url = this->req.line.request_url;
 		int cost_time = get_cost_time();
-		LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d", http_method.c_str(), request_url.c_str(), res->code_msg.status_code, cost_time, res->body.size());
+		LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
+		        http_method.c_str(), request_url.c_str(), res->code_msg.status_code,
+		        cost_time, res->body.size(), client_ip.c_str());
 	}
 
 	void clear() {

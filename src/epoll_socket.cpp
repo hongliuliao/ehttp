@@ -57,7 +57,7 @@ int EpollSocket::listen_on(int port, int backlog) {
     return sockfd;
 }
 
-int EpollSocket::accept_socket(int sockfd) {
+int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
     int new_fd;
     struct sockaddr_in their_addr; /* connector's address information */
     socklen_t sin_size = sizeof(struct sockaddr_in);
@@ -67,7 +67,8 @@ int EpollSocket::accept_socket(int sockfd) {
         return -1;
     }
 
-    LOG_DEBUG("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
+    client_ip = inet_ntoa(their_addr.sin_addr);
+    LOG_DEBUG("server: got connection from %s\n", client_ip.c_str());
     return new_fd;
 }
 
@@ -99,7 +100,8 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
         for (int i = 0; i < fds_num; i++) {
             if(events[i].data.fd == sockfd) {
-                int conn_sock = accept_socket(sockfd);
+                std::string client_ip;
+                int conn_sock = accept_socket(sockfd, client_ip);
                 if (conn_sock == -1) {
                     continue;
                 }
@@ -108,6 +110,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
                 EpollContext *epoll_context = new EpollContext();
                 epoll_context->fd = conn_sock;
+                epoll_context->client_ip = client_ip;
 
                 socket_handler.on_accept(*epoll_context);
 

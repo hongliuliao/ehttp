@@ -140,7 +140,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	}
 
 	if (print_access_log) {
-        hc->print_access_log();
+        hc->print_access_log(epoll_context.client_ip);
 	}
 
 	if(is_keepalive && nwrite > 0) {
