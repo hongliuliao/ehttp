@@ -148,7 +148,7 @@ Request::~Request() {
     }
 }
 
-bool Request::check_req_over(const char *read_buffer, int read_size) {
+bool Request::check_req_over() {
     // check last 4 chars
     int check_num = 4;
     req_buf->seekg(-check_num, req_buf->end);
@@ -169,7 +169,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
 
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
 
-    bool is_over = this->check_req_over(read_buffer, read_size);
+    bool is_over = this->check_req_over();
     if (!is_over) {
         return 1; // to be continue
     }
@@ -238,16 +238,6 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         return 1; // to be continue
     }
     return ret;
-}
-
-int Request::clear() {
-    headers.clear();
-    parse_part = PARSE_REQ_LINE;
-    if (req_buf != NULL) {
-        delete req_buf;
-    }
-    req_buf = new std::stringstream();
-    return 0;
 }
 
 Response::Response(CodeMsg status_code) {

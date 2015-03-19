@@ -108,7 +108,7 @@ public:
 
 	std::string get_request_uri();
 
-	inline bool check_req_over(const char *read_buffer, int read_size);
+	inline bool check_req_over();
 
 	int parse_request(const char *read_buffer, int read_size);
 
@@ -149,21 +149,19 @@ public:
 class HttpContext {
 private:
 	Response *res;
+	Request *req;
 public:
-	Request req;
 	int fd;
 	timeval start;
 
 	HttpContext(int fd) {
 		this->fd = fd;
+		req = new Request();
 		res = new Response();
 	}
 
 	~HttpContext() {
-	    if (res != NULL) {
-            delete res;
-            res = NULL;
-        }
+	    delete_req_res();
 	}
 
 	int record_start_time() {
@@ -179,24 +177,37 @@ public:
 	}
 
 	void print_access_log(std::string &client_ip) {
-		std::string http_method = this->req.line.method;
-		std::string request_url = this->req.line.request_url;
+		std::string http_method = this->req->line.method;
+		std::string request_url = this->req->line.request_url;
 		int cost_time = get_cost_time();
 		LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
 		        http_method.c_str(), request_url.c_str(), res->code_msg.status_code,
 		        cost_time, res->body.size(), client_ip.c_str());
 	}
 
+	inline void delete_req_res() {
+	    if (req != NULL) {
+            delete req;
+            req = NULL;
+        }
+        if (res != NULL) {
+            delete res;
+            res = NULL;
+        }
+	}
+
 	void clear() {
-	    req.clear();
-	    if (res != NULL) {
-	        delete res;
-	    }
+	    delete_req_res();
+	    req = new Request();
         res = new Response();
 	}
 
 	Response &get_res() {
 	    return *res;
+	}
+
+	Request &get_requset() {
+	    return *req;
 	}
 
 };

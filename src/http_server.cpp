@@ -85,16 +85,16 @@ int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 
 int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
-	if (http_context->req.parse_part == PARSE_REQ_LINE) {
+	if (http_context->get_requset().parse_part == PARSE_REQ_LINE) {
         http_context->record_start_time();
 	}
 
-	int ret = http_context->req.parse_request(read_buffer, read_size);
+	int ret = http_context->get_requset().parse_request(read_buffer, read_size);
 	if(ret != 0) {
 		return ret;
 	}
 
-	this->handle_request(http_context->req, http_context->get_res());
+	this->handle_request(http_context->get_requset(), http_context->get_res());
 
 	return 0;
 }
@@ -103,10 +103,10 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int fd = epoll_context.fd;
 	HttpContext *hc = (HttpContext *) epoll_context.ptr;
 	Response &res = hc->get_res();
-	bool is_keepalive = (strcasecmp(hc->req.get_header("Connection").c_str(), "keep-alive") == 0);
+	bool is_keepalive = (strcasecmp(hc->get_requset().get_header("Connection").c_str(), "keep-alive") == 0);
 
 	if (!res.is_writed) {
-	    res.gen_response(hc->req.line.http_version, is_keepalive);
+	    res.gen_response(hc->get_requset().line.http_version, is_keepalive);
 	    res.is_writed = true;
 	}
 
