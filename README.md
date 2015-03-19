@@ -57,7 +57,7 @@ int main() {
 
 ## 运行
 ```
-liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login?name=tom&pwd=3
+liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login?name=tom&pwd=3"
 {"code":0,"msg":"login success!"}
 
 ```

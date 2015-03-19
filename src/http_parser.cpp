@@ -241,6 +241,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
 }
 
 int Request::clear() {
+    headers.clear();
     parse_part = PARSE_REQ_LINE;
     if (req_buf != NULL) {
         delete req_buf;
