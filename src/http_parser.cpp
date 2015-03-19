@@ -136,18 +136,49 @@ std::string Request::get_request_uri() {
 	return line.get_request_uri();
 }
 
+Request::Request() {
+    parse_part = PARSE_REQ_LINE;
+    req_buf = new std::stringstream();
+}
+
+Request::~Request() {
+    if (req_buf != NULL) {
+        delete req_buf;
+        req_buf = NULL;
+    }
+}
+
+bool Request::check_req_over(const char *read_buffer, int read_size) {
+    // check last 4 chars
+    int check_num = 4;
+    req_buf->seekg(-check_num, req_buf->end);
+    char check_buf[check_num];
+    bzero(check_buf, check_num);
+
+    req_buf->readsome(check_buf, check_num);
+    if (strcmp(check_buf, "\r\n\r\n") != 0) {
+        LOG_DEBUG("READ REQUEST NOT OVER!");
+        return false;
+    }
+    req_buf->seekg(0);
+    return true;
+}
 
 int Request::parse_request(const char *read_buffer, int read_size) {
-    int parse_part = PARSE_REQ_LINE;
-    std::string req_str(read_buffer, read_size);
-    LOG_DEBUG("read from client: size:%d, content:%s", read_size, req_str.c_str());
+    req_buf->write(read_buffer, read_size);
 
-    std::stringstream ss(req_str);
+    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
+
+    bool is_over = this->check_req_over(read_buffer, read_size);
+    if (!is_over) {
+        return 1; // to be continue
+    }
+
     std::string line;
     int ret = 0;
 
-    while(ss.good()) {
-        std::getline(ss, line, '\n');
+    while(req_buf->good()) {
+        std::getline(*req_buf, line, '\n');
         if(line == "\r") {  /* the last line in head */
             parse_part = PARSE_REQ_OVER;
 
@@ -207,6 +238,15 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         return 1; // to be continue
     }
     return ret;
+}
+
+int Request::clear() {
+    parse_part = PARSE_REQ_LINE;
+    if (req_buf != NULL) {
+        delete req_buf;
+    }
+    req_buf = new std::stringstream();
+    return 0;
 }
 
 Response::Response(CodeMsg status_code) {

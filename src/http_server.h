@@ -21,8 +21,6 @@ struct HttpMethod {
 };
 
 const static HttpMethod GET_METHOD = {1, "GET"};
-const static HttpMethod POST_METHOD = {2, "POST"};
-const static HttpMethod ALL_METHOD = {3, "ALL"};
 
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
@@ -39,9 +37,9 @@ private:
 public:
 	virtual ~HttpEpollWatcher() {}
 
-	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
+	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
-	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);
+	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
 
 	int handle_request(Request &request, Response &response);
 
@@ -62,9 +60,9 @@ private:
 
 public:
 
-	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = ALL_METHOD);
+	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
-	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = ALL_METHOD);
+	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
 
 	int start(int port, int backlog = 10, int max_events = 1000);
 

@@ -22,7 +22,7 @@ simple_server
 ```
 
 ## 功能列表
-  * http 1.0/1.1(keep-alive 支持) GET/POST请求
+  * http 1.0/1.1(keep-alive 支持) GET请求
   * 便捷的开发形式
   * Json格式的数据返回
 
@@ -46,7 +46,7 @@ void login(Request &request, Json::Value &root) {
 int main() {
 	HttpServer http_server;
 
-	http_server.add_mapping("/login", login, POST_METHOD);
+	http_server.add_mapping("/login", login);
 
 	http_server.start(3490);
 	return 0;
@@ -57,13 +57,12 @@ int main() {
 
 ## 运行
 ```
-liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login" -d "name=tom&pwd=3"
+liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login?name=tom&pwd=3
 {"code":0,"msg":"login success!"}
 
 ```
 
 ## TODO LIST
-  * ~~支持POST方法~~
   * ~~支持JSON数据返回~~
   * 支持Path parameter
   * ~~增加一个proxy来处理高并发~~ 使用epoll来实现,2014-11-6

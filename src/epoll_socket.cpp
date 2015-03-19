@@ -72,16 +72,95 @@ int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
     return new_fd;
 }
 
+int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+    int sockfd = event.data.fd;
+
+    std::string client_ip;
+    int conn_sock = accept_socket(sockfd, client_ip);
+    if (conn_sock == -1) {
+        return -1;
+    }
+    setNonblocking(conn_sock);
+    LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
+
+    EpollContext *epoll_context = new EpollContext();
+    epoll_context->fd = conn_sock;
+    epoll_context->client_ip = client_ip;
+
+    socket_handler.on_accept(*epoll_context);
+
+    struct epoll_event conn_sock_ev;
+    conn_sock_ev.events = EPOLLIN | EPOLLET;
+    conn_sock_ev.data.ptr = epoll_context;
+
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
+        perror("epoll_ctl: conn_sock");
+        exit(EXIT_FAILURE);
+    }
+
+    return 0;
+}
+
+int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
+
+    int buffer_size = SS_READ_BUFFER_SIZE;
+    char read_buffer[buffer_size];
+    memset(read_buffer, 0, buffer_size);
+
+    int read_size = recv(fd, read_buffer, buffer_size, 0);
+
+    int handle_ret = 0;
+    if(read_size > 0) {
+        LOG_DEBUG("read success which read size:%d", read_size);
+        handle_ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
+    }
+
+    if(read_size <= 0 /* connect close or io error*/ || handle_ret < 0) {
+        close_and_release(epollfd, event, socket_handler);
+        return 0;
+    }
+
+    if (handle_ret == READ_CONTINUE) {
+        event.events = EPOLLIN | EPOLLET;
+    } else {
+        event.events = EPOLLOUT | EPOLLET;
+    }
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    return 0;
+}
+
+int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
+    LOG_DEBUG("start write data");
+
+    int ret = socket_handler.on_writeable(*epoll_context);
+    if(ret == WRITE_CONN_CLOSE) {
+        close_and_release(epollfd, event, socket_handler);
+        return 0;
+    }
+
+    if (ret == WRITE_CONN_CONTINUE) {
+        event.events = EPOLLOUT | EPOLLET;
+    } else {
+        event.events = EPOLLIN | EPOLLET;
+    }
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    return 0;
+}
+
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     int sockfd = this->listen_on(port, backlog);
 
-    struct epoll_event ev;
     int epollfd = epoll_create(1024);
     if (epollfd == -1) {
         perror("epoll_create");
         exit(EXIT_FAILURE);
     }
 
+    struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = sockfd;
     if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
@@ -100,73 +179,16 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
         for (int i = 0; i < fds_num; i++) {
             if(events[i].data.fd == sockfd) {
-                std::string client_ip;
-                int conn_sock = accept_socket(sockfd, client_ip);
-                if (conn_sock == -1) {
-                    continue;
-                }
-                setNonblocking(conn_sock);
-                LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
-
-                EpollContext *epoll_context = new EpollContext();
-                epoll_context->fd = conn_sock;
-                epoll_context->client_ip = client_ip;
-
-                socket_handler.on_accept(*epoll_context);
-
-                epoll_event conn_sock_ev;
-                conn_sock_ev.events = EPOLLIN | EPOLLET;
-                conn_sock_ev.data.ptr = epoll_context;
-
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
-                    perror("epoll_ctl: conn_sock");
-                    exit(EXIT_FAILURE);
-                }
-
-            } else if(events[i].events & EPOLLIN ){ // readable
-                EpollContext *epoll_context = (EpollContext *) events[i].data.ptr;
-                int fd = epoll_context->fd;
-
-                int buffer_size = SS_READ_BUFFER_SIZE;
-                char read_buffer[buffer_size];
-                memset(read_buffer, 0, buffer_size);
-
-                int read_size = recv(fd, read_buffer, buffer_size, 0);
-
-                int handle_ret = 0;
-                if(read_size > 0) {
-                    LOG_DEBUG("read success which read size:%d", read_size);
-                    handle_ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
-                }
-
-                if(read_size <= 0 /* connect close or io error*/ || handle_ret != 0) {
-                    close_and_release(epollfd, events[i], socket_handler);
-                    continue;
-                }
-
-                events[i].events = EPOLLOUT | EPOLLET;
-                epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
-
-            } else if(events[i].events & EPOLLOUT) { // writeable
-                EpollContext *epoll_context = (EpollContext *) events[i].data.ptr;
-                int fd = epoll_context->fd;
-                LOG_DEBUG("start write data");
-
-                int ret = socket_handler.on_writeable(*epoll_context);
-                if(ret == WRITE_CONN_CLOSE) {
-                    close_and_release(epollfd, events[i], socket_handler);
-                    continue;
-                }
-
-                if (ret == WRITE_CONN_CONTINUE) {
-                    events[i].events = EPOLLOUT | EPOLLET;
-                } else {
-                    events[i].events = EPOLLIN | EPOLLET;
-                }
-                epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &events[i]);
+                // accept connection
+                this->handle_accept_event(epollfd, events[i], socket_handler);
+            } else if(events[i].events & EPOLLIN ){
+                // readable
+                this->handle_readable_event(epollfd, events[i], socket_handler);
+            } else if(events[i].events & EPOLLOUT) {
+                // writeable
+                this->handle_writeable_event(epollfd, events[i], socket_handler);
             } else {
                 LOG_INFO("unkonw events :%d", events[i].events);
-                continue;
             }
         }
     }
@@ -181,7 +203,7 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
     if(epoll_event.data.ptr == NULL) {
         return 0;
     }
-    LOG_INFO("connect close");
+    LOG_DEBUG("connect close");
 
     EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
 

@@ -16,6 +16,9 @@
 #define WRITE_CONN_CLOSE 1
 #define WRITE_CONN_CONTINUE 2
 
+#define READ_OVER 0
+#define READ_CONTINUE 1
+
 class EpollContext {
 public:
 	void *ptr;
@@ -48,7 +51,13 @@ private:
 
 	int listen_on(int port, int backlog);
 
-	int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_watcher);
+	int close_and_release(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+
+	int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+
+	int handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+
+	int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
 public:
 

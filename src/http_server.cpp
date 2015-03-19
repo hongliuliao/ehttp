@@ -58,7 +58,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 	Resource resource = this->resource_map[req.get_request_uri()];
 	// check method
 	HttpMethod method = resource.method;
-	if(method.code != ALL_METHOD.code && method.name != req.line.method) {
+	if(method.name != req.line.method) {
 		res.code_msg = STATUS_METHOD_NOT_ALLOWED;
 		res.set_head("Allow", method.name);
 		res.body.clear();
@@ -85,18 +85,15 @@ int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 
 int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
-	http_context->record_start_time();
-
-	if(read_size == buffer_size) {
-        LOG_WARN("NOT VALID DATA! single request max size is %d", buffer_size);
-        return -1;
-    }
+	if (http_context->req.parse_part == PARSE_REQ_LINE) {
+        http_context->record_start_time();
+	}
 
 	int ret = http_context->req.parse_request(read_buffer, read_size);
 	if(ret != 0) {
-		LOG_WARN("parse_request error which ret:%d", ret);
-		return -1;
+		return ret;
 	}
+
 	this->handle_request(http_context->req, http_context->get_res());
 
 	return 0;

@@ -86,9 +86,15 @@ private:
 class Request {
 private:
 	std::map<std::string, std::string> headers;
+	std::stringstream *req_buf;
 public:
+	int parse_part;
 	RequestLine line;
 	RequestBody body;
+
+	Request();
+
+	~Request();
 
 	std::string get_param(std::string name);
 
@@ -102,7 +108,11 @@ public:
 
 	std::string get_request_uri();
 
+	inline bool check_req_over(const char *read_buffer, int read_size);
+
 	int parse_request(const char *read_buffer, int read_size);
+
+	int clear();
 };
 
 class Response {
@@ -178,7 +188,7 @@ public:
 	}
 
 	void clear() {
-	    req = Request();
+	    req.clear();
 	    if (res != NULL) {
 	        delete res;
 	    }
