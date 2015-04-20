@@ -11,6 +11,8 @@
 #include "http_parser.h"
 #include "curl/curl.h"
 
+#define MAX_REQ_SIZE 10485760
+
 std::string RequestParam::get_param(std::string &name) {
     std::multimap<std::string, std::string>::iterator i = this->params.find(name);
     if (i == params.end()) {
@@ -139,6 +141,7 @@ std::string Request::get_request_uri() {
 Request::Request() {
     parse_part = PARSE_REQ_LINE;
     req_buf = new std::stringstream();
+    total_req_size = 0;
 }
 
 Request::~Request() {
@@ -156,7 +159,7 @@ bool Request::check_req_over() {
     bzero(check_buf, check_num);
 
     req_buf->readsome(check_buf, check_num);
-    if (strcmp(check_buf, "\r\n\r\n") != 0) {
+    if (strncmp(check_buf, "\r\n\r\n", check_num) != 0) {
         LOG_DEBUG("READ REQUEST NOT OVER!");
         return false;
     }
@@ -165,6 +168,11 @@ bool Request::check_req_over() {
 }
 
 int Request::parse_request(const char *read_buffer, int read_size) {
+    total_req_size += read_size;
+    if (total_req_size > MAX_REQ_SIZE) {
+        LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
+        return -1;
+    }
     req_buf->write(read_buffer, read_size);
 
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);

@@ -87,6 +87,7 @@ class Request {
 private:
 	std::map<std::string, std::string> headers;
 	std::stringstream *req_buf;
+	int total_req_size;
 public:
 	int parse_part;
 	RequestLine line;
