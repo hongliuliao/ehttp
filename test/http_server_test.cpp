@@ -57,8 +57,8 @@ int main(int argc, char **args) {
 	http_server.add_mapping("/login", login);
 
 	int port = atoi(args[1]);
-	int backlog = 1000;
-	int max_events = 100000;
+	int backlog = 100000;
+	int max_events = 1000;
 
 	http_server.start(port, backlog, max_events);
 	return 0;

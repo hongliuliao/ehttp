@@ -177,6 +177,9 @@ int Request::parse_request(const char *read_buffer, int read_size) {
 
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
 
+    if (total_req_size < 4) {
+        return 1;
+    }
     bool is_over = this->check_req_over();
     if (!is_over) {
         return 1; // to be continue
