@@ -10,6 +10,7 @@ simple_server
 ## 依赖
  * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
+ * [libcurl](https://github.com/bagder/curl) 使用了其中的html转码函数
 
 ## 性能
  * qps 12000+ (短连接 ab -c 10 -n 10000 localhost:3490/hello)
