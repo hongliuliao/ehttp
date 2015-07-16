@@ -106,14 +106,36 @@ std::string Request::get_param(std::string name) {
 	return "";
 }
 
+#define ishex(in) ((in >= 'a' && in <= 'f') || \
+                   (in >= 'A' && in <= 'F') || \
+                   (in >= '0' && in <= '9'))
+
+
+int unescape(std::string &param, std::string &unescape_param) {
+    int write_index = 0;
+    for (unsigned i = 0; i < param.size(); i++) {
+        if (('%' == param[i]) && ishex(param[i+1]) && ishex(param[i+2])) {
+            std::string temp;
+            temp += param[i+1];
+            temp += param[i+2];
+            char *ptr;
+            unescape_param[write_index] = (unsigned char) strtol(temp.c_str(), &ptr, 16);
+            i += 2;
+        } else {
+            unescape_param[write_index] = param[i];
+        }
+        write_index++;
+    }
+    return 0;
+}
+
 std::string Request::get_unescape_param(std::string name) {
     std::string param = this->get_param(name);
     if (param.empty()) {
         return param;
     }
-    char *escape_content = curl_unescape(param.c_str(), param.size());
-    std::string unescape_param(escape_content);
-    curl_free(escape_content);
+    std::string unescape_param;
+    unescape(param, unescape_param);
     return unescape_param;
 }
 

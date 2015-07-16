@@ -1,19 +1,36 @@
 .PHONY: all test clean
 
-all:
-	mkdir -p bin/include
-	mkdir -p bin/lib
+CXX=g++
+CXXFLAGS += -g
+
+DEPS_INCLUDE_PATH=-I dependency/simple_log/include/ -I dependency/json-cpp/include/
+SRC_INCLUDE_PATH=-I src
+OUTPUT_INCLUDE_PATH=-I bin/include
+OUTPUT_LIB_PATH=bin/lib/libsimpleserver.a
+DEPS_LIB_PATH=dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a
+
+objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
+
+all: libsimpleserver.a
+	mkdir -p bin/include bin/lib
 	cp src/*.h bin/include/
-	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/http_parser.cpp -o bin/http_parser.o
-	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/http_server.cpp -o bin/http_server.o
-	g++ -g -c -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I src src/epoll_socket.cpp -o bin/epoll_socket.o
-	ar -rcs libsimpleserver.a bin/*.o
 	mv libsimpleserver.a bin/lib/
-	rm -rf bin/*.o
-test: test/http_server_test.cpp test/http_parser_test.cpp
-	g++ -g -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_server_test.cpp dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a bin/lib/libsimpleserver.a -lcurl -o bin/http_server_test
-	g++ -I dependency/simple_log/include/ -I dependency/json-cpp/include/ -I bin/include test/http_parser_test.cpp dependency/simple_log/lib/libsimplelog.a bin/lib/libsimpleserver.a dependency/json-cpp/lib/libjson_libmt.a -lcurl -o bin/http_parser_test
+	rm -rf src/*.o
+
+libsimpleserver.a: $(objects) 
+	ar -rcs libsimpleserver.a src/*.o
+
+test: http_server_test http_parser_test
 	
+%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
+
+http_server_test: test/http_server_test.cpp
+	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o bin/$@
+	
+http_parser_test: test/http_parser_test.cpp
+	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o bin/$@
+
 clean:
 	rm -rf bin/*
 
