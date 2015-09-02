@@ -44,6 +44,10 @@ void usleep(Request &request, Response &response) {
     response.set_body(root);
 }
 
+void test_schedule() {
+    LOG_INFO("START schedule ....");
+}
+
 int main(int argc, char **args) {
     if (argc < 2) {
         LOG_ERROR("usage: ./http_server_test [port]");
@@ -55,6 +59,7 @@ int main(int argc, char **args) {
 	http_server.add_mapping("/usleep", usleep);
 	http_server.add_mapping("/sayhello", sayhello);
 	http_server.add_mapping("/login", login);
+	http_server.set_schedule(test_schedule);
 
 	int port = atoi(args[1]);
 	int backlog = 100000;

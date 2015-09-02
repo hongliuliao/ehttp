@@ -54,15 +54,15 @@ public:
 
 
 class HttpServer {
-
 private:
 	HttpEpollWatcher http_handler;
-
+	EpollSocket epoll_socket;
 public:
-
 	void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
 	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
+
+	void set_schedule(ScheduleHandlerPtr h);
 
 	int start(int port, int backlog = 10, int max_events = 1000);
 

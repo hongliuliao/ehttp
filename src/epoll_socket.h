@@ -26,6 +26,8 @@ public:
 	std::string client_ip;
 };
 
+typedef void (*ScheduleHandlerPtr)();
+
 class EpollSocketWatcher {
 public:
 	virtual int on_accept(EpollContext &epoll_context) = 0;
@@ -40,6 +42,7 @@ public:
 	virtual int on_writeable(EpollContext &epoll_context) = 0;
 
 	virtual int on_close(EpollContext &epoll_context) = 0;
+
 };
 
 class EpollSocket {
@@ -59,10 +62,13 @@ private:
 
 	int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
+	ScheduleHandlerPtr _schedule_handler;
 public:
+	EpollSocket();
 
 	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
+	void set_schedule(ScheduleHandlerPtr h);
 };
 
 #endif /* TCP_EPOLL_H_ */

@@ -151,6 +151,10 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     return 0;
 }
 
+EpollSocket::EpollSocket() {
+    this->_schedule_handler = NULL;
+}
+
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     int sockfd = this->listen_on(port, backlog);
 
@@ -171,10 +175,13 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     epoll_event *events = new epoll_event[max_events];
 
     while(1) {
-        int fds_num = epoll_wait(epollfd, events, max_events, -1);
+        int fds_num = epoll_wait(epollfd, events, max_events, 1000);
         if(fds_num == -1) {
             perror("epoll_pwait");
             exit(EXIT_FAILURE);
+        }
+        if (_schedule_handler != NULL) {
+            _schedule_handler();
         }
 
         for (int i = 0; i < fds_num; i++) {
@@ -219,4 +226,8 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
     int ret = close(fd);
     LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
     return ret;
+}
+
+void EpollSocket::set_schedule(ScheduleHandlerPtr h) {
+    this->_schedule_handler = h;
 }
