@@ -47,7 +47,7 @@ void login(Request &request, Json::Value &root) {
 int main() {
 	HttpServer http_server;
 
-	http_server.add_mapping("/login", login);
+	http_server.add_mapping("/login", login, POST_METHOD);
 
 	http_server.start(3490);
 	return 0;
