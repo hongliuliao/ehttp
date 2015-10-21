@@ -96,12 +96,32 @@ int RequestLine::parse_request_url_params() {
     return 0;
 }
 
+std::string RequestBody::get_param(std::string name) {
+   if (!_is_parsed) {
+        _req_params.parse_query_url(_raw_string);
+        _is_parsed = true;
+   } 
+   return _req_params.get_param(name);
+}
+
+void RequestBody::get_params(std::string &name, std::vector<std::string> &params) {
+   if (!_is_parsed) {
+        _req_params.parse_query_url(_raw_string);
+        _is_parsed = true;
+   } 
+   return _req_params.get_params(name, params);
+}
+
+std::string *RequestBody::get_raw_string() {
+    return &_raw_string;
+}
+
 std::string Request::get_param(std::string name) {
-	if(line.method == "GET") {
+	if (line.method == "GET") {
 		return line.get_request_param().get_param(name);
 	}
-	if(line.method == "POST") {
-		return body.get_param(name);
+	if (line.method == "POST") {
+		return _body.get_param(name);
 	}
 	return "";
 }
@@ -140,11 +160,11 @@ std::string Request::get_unescape_param(std::string name) {
 }
 
 void Request::get_params(std::string &name, std::vector<std::string> &params) {
-    if(line.method == "GET") {
+    if (line.method == "GET") {
         line.get_request_param().get_params(name, params);
     }
-    if(line.method == "POST") {
-        body.get_params(name, params);
+    if (line.method == "POST") {
+        _body.get_params(name, params);
     }
 }
 
@@ -162,74 +182,41 @@ std::string Request::get_request_uri() {
 
 Request::Request() {
     parse_part = PARSE_REQ_LINE;
-    req_buf = new std::stringstream();
     total_req_size = 0;
 }
 
-Request::~Request() {
-    if (req_buf != NULL) {
-        delete req_buf;
-        req_buf = NULL;
+Request::~Request() {}
+
+bool Request::check_header_over() {
+    if (total_req_size < 4) {
+        return false;
     }
-}
-
-bool Request::check_req_over() {
-    // check last 4 chars
-    int check_num = 4;
-    req_buf->seekg(-check_num, req_buf->end);
-    char check_buf[check_num];
-    bzero(check_buf, check_num);
-
-    req_buf->readsome(check_buf, check_num);
-    if (strncmp(check_buf, "\r\n\r\n", check_num) != 0) {
+    if (req_buf.str().find("\r\n\r\n") == std::string::npos) {
         LOG_DEBUG("READ REQUEST NOT OVER!");
         return false;
     }
-    req_buf->seekg(0);
     return true;
 }
 
-int Request::parse_request(const char *read_buffer, int read_size) {
-    total_req_size += read_size;
-    if (total_req_size > MAX_REQ_SIZE) {
-        LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
-        return -1;
-    }
-    req_buf->write(read_buffer, read_size);
-
-    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
-
-    if (total_req_size < 4) {
-        return 1;
-    }
-    bool is_over = this->check_req_over();
-    if (!is_over) {
-        return 1; // to be continue
-    }
-
+int Request::parse_line_header() {
     std::string line;
-    int ret = 0;
-
-    while(req_buf->good()) {
-        std::getline(*req_buf, line, '\n');
-        if(line == "\r") {  /* the last line in head */
-            parse_part = PARSE_REQ_OVER;
-
-            if(this->line.method == "POST") { // post request need body
-                parse_part = PARSE_REQ_BODY;
-            }
-            continue;
+    while(req_buf.good()) {
+        std::getline(req_buf, line, '\n');
+        if (line == "\r") {  /* the last line in head */
+            parse_part = PARSE_REQ_HEAD_OVER;
+            break;
         }
 
-        if(parse_part == PARSE_REQ_LINE) { // parse request line like  "GET /index.jsp HTTP/1.1"
+        if (parse_part == PARSE_REQ_LINE) { // parse request line like  "GET /index.jsp HTTP/1.1"
             LOG_DEBUG("start parse req_line line:%s", line.c_str());
-            ret = this->line.parse_request_line(line.c_str(), line.size() - 1);
+            int ret = this->line.parse_request_line(line.c_str(), line.size() - 1);
             if(ret != 0) {
                 LOG_ERROR("parse request line error!");
                 return -1;
             }
             parse_part = PARSE_REQ_HEAD;
-            LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s", this->line.method.c_str(), this->line.request_url.c_str(), this->line.http_version.c_str());
+            LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s",
+                this->line.method.c_str(), this->line.request_url.c_str(), this->line.http_version.c_str());
 
             // check method
             if(this->line.method != "GET" && this->line.method != "POST") {
@@ -239,7 +226,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
             continue;
         }
 
-        if(parse_part == PARSE_REQ_HEAD && !line.empty()) { // read head
+        if (parse_part == PARSE_REQ_HEAD && !line.empty()) { // read head
             LOG_DEBUG("start PARSE_REQ_HEAD line:%s", line.c_str());
 
             std::vector<std::string> parts;
@@ -252,25 +239,85 @@ int Request::parse_request(const char *read_buffer, int read_size) {
             add_header(parts[0], parts[1]);
             continue;
         }
+    }
+    return 0;
+}
 
-        if(parse_part == PARSE_REQ_BODY && !line.empty()) {
-            LOG_DEBUG("start PARSE_REQ_BODY line:%s", line.c_str());
+int Request::fill_message_body(const char *read_buffer, int read_size) {
+    std::string cl = this->get_header("Content-Length");
+    int content_len = atoi(cl.c_str());
+    std::string *raw_str = this->_body.get_raw_string();
+    raw_str->append(read_buffer, read_size); 
+    int current_size = raw_str->size();
+    LOG_DEBUG("ADD message body size:%u, content:%s", current_size, raw_str->c_str());
+    if (content_len != raw_str->size()) {
+        LOG_DEBUG("message body receive part, which context_len:%d, receive_size:%u",
+                content_len, raw_str->size());
+        return 1; 
+    } 
+    return 0;
+}
 
-            this->body.parse_query_url(line);
+int Request::parse_request(const char *read_buffer, int read_size) {
+    total_req_size += read_size;
+    if (total_req_size > MAX_REQ_SIZE) {
+        LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
+        return -1;
+    }
+    req_buf.write(read_buffer, read_size);
+    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
+
+    if (parse_part == PARSE_REQ_LINE) {
+        bool is_over = this->check_header_over();
+        if (!is_over) {
+            return 1; // to be continue
+        }
+
+        int ret = this->parse_line_header();
+        if (ret != 0) {
+            return ret;
+        }
+
+        if (this->line.method == "GET") {
             parse_part = PARSE_REQ_OVER;
-            break;
+            return 0;
         }
-    }
 
-    if(parse_part != PARSE_REQ_OVER) {
-        std::string line_info = "unknown";
-        if (parse_part > PARSE_REQ_LINE) {
-            line_info = this->line.to_string();
+        if (this->line.method == "POST") { // post request need body
+            std::string cl = this->get_header("Content-Length");
+            if (cl.empty()) {
+                LOG_ERROR("Content-Length is required header in POST request!");
+                return PARSE_LEN_REQUIRED;  
+            }
+            int content_len = atoi(cl.c_str());
+            if (content_len == 0) {
+                parse_part = PARSE_REQ_OVER;
+                return 0; 
+            } 
+            parse_part = PARSE_REQ_BODY;
+            std::string line;
+            int fill_ret;
+            while (req_buf.good()) {
+                std::getline(req_buf, line, '\n');
+                fill_ret = this->fill_message_body(line.c_str(), line.size());
+            }
+            if (fill_ret != 0) {
+                return 1;
+            }
+            parse_part = PARSE_REQ_OVER;
         }
-        LOG_ERROR("parse request no over parse_part:%d, line_info:%s", parse_part, line_info.c_str());
-        return 1; // to be continue
     }
-    return ret;
+    if (parse_part == PARSE_REQ_BODY) {
+         int fill_ret = this->fill_message_body(read_buffer, read_size); 
+         if (fill_ret != 0) {
+             return 1;
+         }
+    }
+    return 0;
+}
+
+RequestBody *Request::get_body() {
+    return &_body;
 }
 
 Response::Response(CodeMsg status_code) {

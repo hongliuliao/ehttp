@@ -4,6 +4,8 @@
 Debug
 bin
 log
+tags
+
 # Compiled Object files
 *.slo
 *.lo

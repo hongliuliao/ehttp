@@ -58,8 +58,8 @@ int main(int argc, char **args) {
 	http_server.add_mapping("/hello", hello);
 	http_server.add_mapping("/usleep", usleep);
 	http_server.add_mapping("/sayhello", sayhello);
-	http_server.add_mapping("/login", login);
-	http_server.set_schedule(test_schedule);
+	http_server.add_mapping("/login", login, POST_METHOD);
+	//http_server.set_schedule(test_schedule);
 
 	int port = atoi(args[1]);
 	int backlog = 100000;

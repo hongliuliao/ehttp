@@ -25,11 +25,14 @@ struct CodeMsg {
 const static CodeMsg STATUS_OK = {200, "OK"};
 const static CodeMsg STATUS_NOT_FOUND = {404, "Not Found"};
 const static CodeMsg STATUS_METHOD_NOT_ALLOWED = {405, "Method Not Allowed"};
+const static CodeMsg STATUS_LENGTH_REQUIRED = {411, "Length Required"};
 
 const static int PARSE_REQ_LINE = 0;
 const static int PARSE_REQ_HEAD = 1;
 const static int PARSE_REQ_BODY = 2;
 const static int PARSE_REQ_OVER = 3;
+const static int PARSE_REQ_HEAD_OVER = 4;
+const static int PARSE_LEN_REQUIRED = -2;
 
 class RequestParam {
 private:
@@ -81,17 +84,35 @@ private:
 };
 
 
-#define RequestBody RequestParam
+class RequestBody {
+private:
+    std::string _raw_string;
+    RequestParam _req_params;
+    bool _is_parsed;
+public:
+    RequestBody() {
+       _is_parsed = false;
+    }
+
+    std::string get_param(std::string name);
+    
+    void get_params(std::string &name, std::vector<std::string> &params);
+
+    std::string *get_raw_string();
+};
 
 class Request {
 private:
 	std::map<std::string, std::string> headers;
-	std::stringstream *req_buf;
+	std::stringstream req_buf;
 	int total_req_size;
+	RequestBody _body;
+    
+    int fill_message_body(const char *read_buffer, int read_size);
 public:
 	int parse_part;
-	RequestLine line;
-	RequestBody body;
+	
+    RequestLine line;
 
 	Request();
 
@@ -109,11 +130,15 @@ public:
 
 	std::string get_request_uri();
 
-	inline bool check_req_over();
+	inline bool check_header_over();
+
+    int parse_line_header();
 
 	int parse_request(const char *read_buffer, int read_size);
 
 	int clear();
+
+    RequestBody *get_body();
 };
 
 class Response {

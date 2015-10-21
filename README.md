@@ -3,7 +3,6 @@ simple_server
 此组件是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
 ## require
 * linux 2.6 +
-* g++3.4 +
 
 ## 特点
 * 单进程 + 单线程 + epoll
@@ -14,8 +13,8 @@ simple_server
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
 
 ## 性能
- * qps 12000+ (短连接 ab -c 10 -n 10000 localhost:3490/hello)
- * qps 16000+ (长连接 ab -c 10 -n 10000 -k localhost:3490/hello)
+ * qps 10000+ (短连接 ab -c 10 -n 10000 localhost:3490/hello)
+ * qps 14000+ (长连接 ab -c 10 -n 10000 -k localhost:3490/hello)
 
 ## 构建 && 测试
 ```
@@ -24,7 +23,7 @@ simple_server
 ```
 
 ## 功能列表
-  * http 1.0/1.1(keep-alive 支持) GET请求
+  * http 1.0/1.1(keep-alive 支持) GET/POST请求
   * 便捷的开发形式
   * Json格式的数据返回
 
@@ -59,14 +58,9 @@ int main() {
 
 ## 运行
 ```
-liao@ubuntu:~/workspace/simple_server$ curl "localhost:3490/login?name=tom&pwd=3"
+liao@ubuntu:~/workspace/simple_server$ curl -d "name=tom&pwd=3" "localhost:3490/login"
 {"code":0,"msg":"login success!"}
 
 ```
 
-## TODO LIST
-  * ~~支持JSON数据返回~~
-  * 支持Path parameter
-  * ~~增加一个proxy来处理高并发~~ 使用epoll来实现,2014-11-6
-  * ~~解决CPU导致的瓶颈,提高qps~~ 
 

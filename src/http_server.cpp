@@ -93,9 +93,14 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer
 	}
 
 	int ret = http_context->get_requset().parse_request(read_buffer, read_size);
-	if(ret != 0) {
+	if (ret != 0) {
 		return ret;
 	}
+    if (ret == PARSE_LEN_REQUIRED) {
+        http_context->get_res().code_msg = STATUS_LENGTH_REQUIRED;
+        http_context->get_res().body = STATUS_LENGTH_REQUIRED.msg;
+        return 0;
+    } 
 
 	this->handle_request(http_context->get_requset(), http_context->get_res());
 

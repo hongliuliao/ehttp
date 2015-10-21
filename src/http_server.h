@@ -21,6 +21,7 @@ struct HttpMethod {
 };
 
 const static HttpMethod GET_METHOD = {1, "GET"};
+const static HttpMethod POST_METHOD = {2, "POST"};
 
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
