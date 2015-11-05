@@ -9,7 +9,6 @@
 #include <algorithm>
 #include "simple_log.h"
 #include "http_parser.h"
-#include "curl/curl.h"
 
 #define MAX_REQ_SIZE 10485760
 

@@ -90,7 +90,7 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     socket_handler.on_accept(*epoll_context);
 
     struct epoll_event conn_sock_ev;
-    conn_sock_ev.events = EPOLLIN | EPOLLET;
+    conn_sock_ev.events = EPOLLIN;
     conn_sock_ev.data.ptr = epoll_context;
 
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
@@ -123,9 +123,9 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     }
 
     if (handle_ret == READ_CONTINUE) {
-        event.events = EPOLLIN | EPOLLET;
+        event.events = EPOLLIN;
     } else {
-        event.events = EPOLLOUT | EPOLLET;
+        event.events = EPOLLOUT;
     }
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
     return 0;
@@ -143,9 +143,9 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     }
 
     if (ret == WRITE_CONN_CONTINUE) {
-        event.events = EPOLLOUT | EPOLLET;
+        event.events = EPOLLOUT;
     } else {
-        event.events = EPOLLIN | EPOLLET;
+        event.events = EPOLLIN;
     }
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
     return 0;
@@ -217,7 +217,7 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
     socket_handler.on_close(*hc);
 
     int fd = hc->fd;
-    epoll_event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    epoll_event.events = EPOLLIN | EPOLLOUT;
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
 
     delete (EpollContext *) epoll_event.data.ptr;
