@@ -3,18 +3,18 @@
 CXX=g++
 CXXFLAGS += -g
 
-DEPS_INCLUDE_PATH=-I dependency/simple_log/include/ -I dependency/json-cpp/include/
+DEPS_INCLUDE_PATH=-I deps/simple_log/include/ -I deps/json-cpp/include/
+DEPS_LIB_PATH=deps/simple_log/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a
 SRC_INCLUDE_PATH=-I src
-OUTPUT_INCLUDE_PATH=-I bin/include
-OUTPUT_LIB_PATH=bin/lib/libsimpleserver.a
-DEPS_LIB_PATH=dependency/simple_log/lib/libsimplelog.a dependency/json-cpp/lib/libjson_libmt.a
+OUTPUT_INCLUDE_PATH=-I output/include
+OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
 
 objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
 all: libsimpleserver.a
-	mkdir -p bin/include bin/lib
-	cp src/*.h bin/include/
-	mv libsimpleserver.a bin/lib/
+	mkdir -p output/include output/lib output/bin
+	cp src/*.h output/include/
+	mv libsimpleserver.a output/lib/
 	rm -rf src/*.o
 
 libsimpleserver.a: $(objects) 
@@ -26,11 +26,11 @@ test: http_server_test http_parser_test
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
 
 http_server_test: test/http_server_test.cpp
-	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o bin/$@
+	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 	
 http_parser_test: test/http_parser_test.cpp
-	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o bin/$@
+	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
 clean:
-	rm -rf bin/*
+	rm -rf output/*
 

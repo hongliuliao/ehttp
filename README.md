@@ -1,8 +1,6 @@
 simple_server
 =============
 此组件是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
-## require
-* linux 2.6 +
 
 ## 特点
 * 单进程 + 单线程 + epoll
@@ -13,13 +11,13 @@ simple_server
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) json序列化组件
 
 ## 性能
- * qps 10000+ (短连接 ab -c 10 -n 10000 localhost:3490/hello)
- * qps 14000+ (长连接 ab -c 10 -n 10000 -k localhost:3490/hello)
+ * qps 10000+ (短连接 ab -c 10 -n 10000 localhost:3456/hello)
+ * qps 14000+ (长连接 ab -c 10 -n 10000 -k localhost:3456/hello)
 
 ## 构建 && 测试
 ```
- make && make test && ./bin/http_server_test 3490
- curl "localhost:3490/hello"
+ make && make test && ./output/bin/http_server_test 3456
+ curl "localhost:3456/hello"
 ```
 
 ## 功能列表
@@ -49,7 +47,7 @@ int main() {
 
 	http_server.add_mapping("/login", login, POST_METHOD);
 
-	http_server.start(3490);
+	http_server.start(3456);
 	return 0;
 }
 
@@ -58,7 +56,7 @@ int main() {
 
 ## 运行
 ```
-liao@ubuntu:~/workspace/simple_server$ curl -d "name=tom&pwd=3" "localhost:3490/login"
+liao@ubuntu:~/workspace/simple_server$ curl -d "name=tom&pwd=3" "localhost:3456/login"
 {"code":0,"msg":"login success!"}
 
 ```
