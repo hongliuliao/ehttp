@@ -19,7 +19,7 @@
 #include <unistd.h>
 #include <sstream>
 #include "simple_log.h"
-#include "http_parser.h"
+#include "sim_parser.h"
 #include "http_server.h"
 
 int HttpServer::start(int port, int backlog, int max_events) {

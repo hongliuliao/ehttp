@@ -1,15 +1,16 @@
-.PHONY: all test clean
+.PHONY: all test clean deps
 
 CXX=g++
 CXXFLAGS += -g
 
-DEPS_INCLUDE_PATH=-I deps/simple_log/include/ -I deps/json-cpp/include/
-DEPS_LIB_PATH=deps/simple_log/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a
+DEPS_INCLUDE_PATH=-I deps/simple_log/include/ -I deps/json-cpp/include/ -I deps/http-parser/
+DEPS_LIB_PATH=deps/simple_log/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
 SRC_INCLUDE_PATH=-I src
 OUTPUT_INCLUDE_PATH=-I output/include
 OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
 
 objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
+
 
 all: libsimpleserver.a
 	mkdir -p output/include output/lib output/bin
@@ -17,7 +18,10 @@ all: libsimpleserver.a
 	mv libsimpleserver.a output/lib/
 	rm -rf src/*.o
 
-libsimpleserver.a: $(objects) 
+deps:
+	make -C deps/http-parser package
+
+libsimpleserver.a: deps $(objects) 
 	ar -rcs libsimpleserver.a src/*.o
 
 test: http_server_test http_parser_test

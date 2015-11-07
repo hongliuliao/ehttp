@@ -16,6 +16,7 @@
 
 #include "json/json.h"
 #include "simple_log.h"
+#include "http_parser.h"
 
 struct CodeMsg {
 	int status_code;
@@ -33,6 +34,8 @@ const static int PARSE_REQ_BODY = 2;
 const static int PARSE_REQ_OVER = 3;
 const static int PARSE_REQ_HEAD_OVER = 4;
 const static int PARSE_LEN_REQUIRED = -2;
+
+const static int NEED_MORE_STATUS = 1;
 
 class RequestParam {
 private:
@@ -75,12 +78,12 @@ public:
         ret += http_version;
         return ret;
     }
-private:
-    RequestParam param;
     /**
      * request_url : /sayhello?name=tom&age=3
      */
     int parse_request_url_params();
+private:
+    RequestParam param;
 };
 
 
@@ -88,32 +91,24 @@ class RequestBody {
 private:
     std::string _raw_string;
     RequestParam _req_params;
-    bool _is_parsed;
 public:
-    RequestBody() {
-       _is_parsed = false;
-    }
-
     std::string get_param(std::string name);
     
     void get_params(std::string &name, std::vector<std::string> &params);
 
     std::string *get_raw_string();
+
+    RequestParam *get_req_params();
 };
 
 class Request {
 private:
 	std::map<std::string, std::string> headers;
-	std::stringstream req_buf;
 	int total_req_size;
 	RequestBody _body;
-    
-    int fill_message_body(const char *read_buffer, int read_size);
+    http_parser_settings _settings;
+    http_parser _parser;
 public:
-	int parse_part;
-	
-    RequestLine line;
-
 	Request();
 
 	~Request();
@@ -130,15 +125,22 @@ public:
 
 	std::string get_request_uri();
 
-	inline bool check_header_over();
-
-    int parse_line_header();
-
 	int parse_request(const char *read_buffer, int read_size);
 
 	int clear();
 
     RequestBody *get_body();
+    
+    bool last_was_value;
+    
+    std::vector<std::string> header_fields;
+    
+    std::vector<std::string> header_values;
+	
+    int parse_part;
+	
+    RequestLine line;
+
 };
 
 class Response {

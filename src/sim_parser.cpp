@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include "simple_log.h"
+#include "sim_parser.h"
 #include "http_parser.h"
 
 #define MAX_REQ_SIZE 10485760
@@ -96,23 +97,19 @@ int RequestLine::parse_request_url_params() {
 }
 
 std::string RequestBody::get_param(std::string name) {
-   if (!_is_parsed) {
-        _req_params.parse_query_url(_raw_string);
-        _is_parsed = true;
-   } 
    return _req_params.get_param(name);
 }
 
 void RequestBody::get_params(std::string &name, std::vector<std::string> &params) {
-   if (!_is_parsed) {
-        _req_params.parse_query_url(_raw_string);
-        _is_parsed = true;
-   } 
    return _req_params.get_params(name, params);
 }
 
 std::string *RequestBody::get_raw_string() {
     return &_raw_string;
+}
+
+RequestParam *RequestBody::get_req_params() {
+    return &_req_params;
 }
 
 std::string Request::get_param(std::string name) {
@@ -179,83 +176,120 @@ std::string Request::get_request_uri() {
 	return line.get_request_uri();
 }
 
+int ss_on_url(http_parser *p, const char *buf, size_t len) {
+    Request *req = (Request *) p->data;
+    std::string url;
+    url.assign(buf, len);
+    req->line.request_url += url;
+    return 0;
+}
+
+int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
+    Request *req = (Request *) p->data;
+    int parse_part = req->parse_part;
+    if (parse_part == PARSE_REQ_LINE) {
+        if (p->method == 1) {
+            req->line.method = "GET";
+        }
+        if (p->method == 3) {
+            req->line.method = "POST";
+        }
+        int ret = req->line.parse_request_url_params();
+        if (ret != 0) {
+            return ret; 
+        }
+        if (p->http_major == 1 && p->http_minor == 0) {
+            req->line.http_version = "HTTP/1.0";
+        }
+        if (p->http_major == 1 && p->http_minor == 1) {
+            req->line.http_version = "HTTP/1.1";
+        }
+        parse_part = PARSE_REQ_HEAD;
+    }
+
+    std::string field;
+    field.assign(buf, len);
+    if (req->last_was_value) {
+        req->header_fields.push_back(field);
+        req->last_was_value = false;
+    } else {
+        req->header_fields[req->header_fields.size() - 1] += field;
+    }
+    LOG_DEBUG("GET field:%s", field.c_str());
+    return 0;
+}
+
+int ss_on_header_value(http_parser *p, const char *buf, size_t len) {
+    Request *req = (Request *) p->data;
+    
+    std::string value;
+    value.assign(buf, len);
+    if (!req->last_was_value) {
+        req->header_values.push_back(value); 
+    } else {
+        req->header_values[req->header_values.size() - 1] += value; 
+    } 
+    LOG_INFO("GET value:%s", value.c_str());
+    req->last_was_value = true;
+    return 0;
+}
+
+int ss_on_headers_complete(http_parser *p) {
+    Request *req = (Request *) p->data;
+    if (req->header_fields.size() != req->header_values.size()) {
+        LOG_ERROR("header field size:%u != value size:%u",
+            req->header_fields.size(), req->header_values.size());
+        return -1;
+    }
+    for (size_t i = 0; i < req->header_fields.size(); i++) {
+        req->add_header(req->header_fields[i], req->header_values[i]);    
+    }
+    req->parse_part = PARSE_REQ_HEAD_OVER;
+    LOG_DEBUG("HEADERS COMPLETE! which field size:%u, value size:%u",
+        req->header_fields.size(), req->header_values.size());
+    return 0;
+}
+
+int ss_on_body(http_parser *p, const char *buf, size_t len) {
+    Request *req = (Request *) p->data;
+    req->get_body()->get_raw_string()->append(buf, len);
+    req->parse_part = PARSE_REQ_BODY;
+    LOG_DEBUG("GET body len:%d", len);
+    return 0;
+}
+
+int ss_on_message_complete(http_parser *p) {
+    Request *req = (Request *) p->data;
+    // parse body params
+    if (req->get_header("Content-Type") == "application/x-www-form-urlencoded") {
+        std::string *raw_str = req->get_body()->get_raw_string();
+        if (raw_str->size()) {
+            req->get_body()->get_req_params()->parse_query_url(*raw_str);
+        }
+    }
+    req->parse_part = PARSE_REQ_OVER;
+    LOG_DEBUG("msg COMPLETE!");
+    return 0;
+}
+
 Request::Request() {
     parse_part = PARSE_REQ_LINE;
     total_req_size = 0;
+    last_was_value = true; // add new field for first
+
+    http_parser_settings_init(&_settings);
+    _settings.on_url = ss_on_url;
+    _settings.on_header_field = ss_on_header_field;
+    _settings.on_header_value = ss_on_header_value;
+    _settings.on_headers_complete = ss_on_headers_complete;
+    _settings.on_body = ss_on_body;
+    _settings.on_message_complete = ss_on_message_complete;
+
+    http_parser_init(&_parser, HTTP_REQUEST);
+    _parser.data = this;
 }
 
 Request::~Request() {}
-
-bool Request::check_header_over() {
-    if (total_req_size < 4) {
-        return false;
-    }
-    if (req_buf.str().find("\r\n\r\n") == std::string::npos) {
-        LOG_DEBUG("READ REQUEST NOT OVER!");
-        return false;
-    }
-    return true;
-}
-
-int Request::parse_line_header() {
-    std::string line;
-    while(req_buf.good()) {
-        std::getline(req_buf, line, '\n');
-        if (line == "\r") {  /* the last line in head */
-            parse_part = PARSE_REQ_HEAD_OVER;
-            break;
-        }
-
-        if (parse_part == PARSE_REQ_LINE) { // parse request line like  "GET /index.jsp HTTP/1.1"
-            LOG_DEBUG("start parse req_line line:%s", line.c_str());
-            int ret = this->line.parse_request_line(line.c_str(), line.size() - 1);
-            if(ret != 0) {
-                LOG_ERROR("parse request line error!");
-                return -1;
-            }
-            parse_part = PARSE_REQ_HEAD;
-            LOG_DEBUG("parse_request_line success which method:%s, url:%s, http_version:%s",
-                this->line.method.c_str(), this->line.request_url.c_str(), this->line.http_version.c_str());
-
-            // check method
-            if(this->line.method != "GET" && this->line.method != "POST") {
-                LOG_ERROR("un support method:%s", this->line.method.c_str());
-                return -1;
-            }
-            continue;
-        }
-
-        if (parse_part == PARSE_REQ_HEAD && !line.empty()) { // read head
-            LOG_DEBUG("start PARSE_REQ_HEAD line:%s", line.c_str());
-
-            std::vector<std::string> parts;
-            split_str(parts, line, ':'); // line like Cache-Control:max-age=0
-            if(parts.size() < 2) {
-                LOG_WARN("not valid head which line:%s", line.c_str());
-                continue;
-            }
-
-            add_header(parts[0], parts[1]);
-            continue;
-        }
-    }
-    return 0;
-}
-
-int Request::fill_message_body(const char *read_buffer, int read_size) {
-    std::string cl = this->get_header("Content-Length");
-    int content_len = atoi(cl.c_str());
-    std::string *raw_str = this->_body.get_raw_string();
-    raw_str->append(read_buffer, read_size); 
-    int current_size = raw_str->size();
-    LOG_DEBUG("ADD message body size:%u, content:%s", current_size, raw_str->c_str());
-    if (content_len != raw_str->size()) {
-        LOG_DEBUG("message body receive part, which context_len:%d, receive_size:%u",
-                content_len, raw_str->size());
-        return 1; 
-    } 
-    return 0;
-}
 
 int Request::parse_request(const char *read_buffer, int read_size) {
     total_req_size += read_size;
@@ -263,54 +297,19 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
         return -1;
     }
-    req_buf.write(read_buffer, read_size);
+    ssize_t nparsed = http_parser_execute(&_parser, &_settings, read_buffer, read_size);
+    if (nparsed != read_size) {
+        std::string err_msg = "unkonw";
+        if (_parser.http_errno) {
+            err_msg = http_errno_description(HTTP_PARSER_ERRNO(&_parser));
+        }
+        LOG_ERROR("parse request error! msg:%s", err_msg.c_str());
+        return -1;
+    }
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
 
-    if (parse_part == PARSE_REQ_LINE) {
-        bool is_over = this->check_header_over();
-        if (!is_over) {
-            return 1; // to be continue
-        }
-
-        int ret = this->parse_line_header();
-        if (ret != 0) {
-            return ret;
-        }
-
-        if (this->line.method == "GET") {
-            parse_part = PARSE_REQ_OVER;
-            return 0;
-        }
-
-        if (this->line.method == "POST") { // post request need body
-            std::string cl = this->get_header("Content-Length");
-            if (cl.empty()) {
-                LOG_ERROR("Content-Length is required header in POST request!");
-                return PARSE_LEN_REQUIRED;  
-            }
-            int content_len = atoi(cl.c_str());
-            if (content_len == 0) {
-                parse_part = PARSE_REQ_OVER;
-                return 0; 
-            } 
-            parse_part = PARSE_REQ_BODY;
-            std::string line;
-            int fill_ret;
-            while (req_buf.good()) {
-                std::getline(req_buf, line, '\n');
-                fill_ret = this->fill_message_body(line.c_str(), line.size());
-            }
-            if (fill_ret != 0) {
-                return 1;
-            }
-            parse_part = PARSE_REQ_OVER;
-        }
-    }
-    if (parse_part == PARSE_REQ_BODY) {
-         int fill_ret = this->fill_message_body(read_buffer, read_size); 
-         if (fill_ret != 0) {
-             return 1;
-         }
+    if (parse_part != PARSE_REQ_OVER) {
+        return NEED_MORE_STATUS;
     }
     return 0;
 }
