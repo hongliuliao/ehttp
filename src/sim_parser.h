@@ -5,8 +5,8 @@
  *      Author: liao
  */
 
-#ifndef HTTP_PARSER_H_
-#define HTTP_PARSER_H_
+#ifndef SIM_PARSER_H_
+#define SIM_PARSER_H_
 
 #include <string>
 #include <sstream>
@@ -60,8 +60,6 @@ public:
 	std::string http_version; // like HTTP/1.1
 
 	std::string get_request_uri();
-
-    int parse_request_line(const char *line, int size);
 
     RequestParam &get_request_param() {
         return param;
@@ -240,7 +238,4 @@ public:
 
 };
 
-void split_str(std::vector<std::string> &output, std::string &logContent, char split_char);
-
-
-#endif /* HTTP_PARSER_H_ */
+#endif /* SIM_PARSER_H_ */

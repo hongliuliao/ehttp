@@ -56,31 +56,6 @@ std::string RequestLine::get_request_uri() {
 	return uri;
 }
 
-int RequestLine::parse_request_line(const char *line, int size) {
-    std::string line_str(line, size);
-    std::stringstream ss(std::string(line, size));
-
-    std::getline(ss, method, ' ');
-    if(!ss.good()) {
-        LOG_ERROR("GET method error which line:%s", line_str.c_str());
-        return -1;
-    }
-    std::getline(ss, request_url, ' ');
-    if(!ss.good()) {
-        LOG_ERROR("GET request_url error which line:%s", line_str.c_str());
-        return -1;
-    }
-    int ret = parse_request_url_params();
-    if (ret != 0) {
-        LOG_WARN("parse_request_url_params fail which request_url:%s", request_url.c_str());
-        return ret;
-    }
-
-    std::getline(ss, http_version, ' ');
-
-    return 0;
-}
-
 int RequestLine::parse_request_url_params() {
     std::stringstream ss(request_url);
     LOG_DEBUG("start parse params which request_url:%s", request_url.c_str());
@@ -378,28 +353,3 @@ int Response::rollback(int num) {
     return res_bytes.good() ? 0 : -1;
 }
 
-static inline std::string &ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-
-// trim from end
-static inline std::string &rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-    return s;
-}
-
-// trim from both ends
-static inline std::string &trim(std::string &s) {
-    return ltrim(rtrim(s));
-}
-
-void split_str(std::vector<std::string> &result, std::string &str, char split_char) {
-	std::stringstream ss(str);
-	while(ss.good()) {
-		std::string temp;
-		std::getline(ss, temp, split_char);
-
-		result.push_back(trim(temp));
-	}
-}
