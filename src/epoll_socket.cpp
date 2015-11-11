@@ -94,8 +94,8 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     conn_sock_ev.data.ptr = epoll_context;
 
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
-        perror("epoll_ctl: conn_sock");
-        exit(EXIT_FAILURE);
+        LOG_ERROR("epoll_ctl: conn_sock:%s", strerror(errno));
+        return -1;
     }
 
     return 0;
@@ -163,16 +163,16 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
     int epollfd = epoll_create(1024);
     if (epollfd == -1) {
-        perror("epoll_create");
-        exit(EXIT_FAILURE);
+        LOG_ERROR("epoll_create:%s", strerror(errno));
+        return -1;
     }
 
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = sockfd;
     if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
-        perror("epoll_ctl: listen_sock");
-        exit(EXIT_FAILURE);
+        LOG_ERROR("epoll_ctl: listen_sock:%s", strerror(errno));
+        return -1;
     }
 
     epoll_event *events = new epoll_event[max_events];
@@ -180,8 +180,8 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     while(1) {
         int fds_num = epoll_wait(epollfd, events, max_events, 1000);
         if(fds_num == -1) {
-            perror("epoll_pwait");
-            exit(EXIT_FAILURE);
+            LOG_ERROR("epoll_pwait:%s", strerror(errno));
+            return -1;
         }
         if (_schedule_handler != NULL) {
             _schedule_handler();
