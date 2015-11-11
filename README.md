@@ -12,8 +12,8 @@ simple_server
  * [http-parser](https://github.com/nodejs/http-parser) For parse http requset 
 
 ## 性能
- * qps 10000+ (短连接 ab -c 10 -n 10000 localhost:3456/hello)
- * qps 14000+ (长连接 ab -c 10 -n 10000 -k localhost:3456/hello)
+ * qps 12000+ (短连接 ab -c 10 -n 10000 localhost:3456/hello)
+ * qps 18000+ (长连接 ab -c 10 -n 10000 -k localhost:3456/hello)
 
 ## 构建 && 测试
 ```
