@@ -23,8 +23,7 @@
 #include "http_server.h"
 
 int HttpServer::start(int port, int backlog, int max_events) {
-	epoll_socket.start_epoll(port, http_handler, backlog, max_events);
-	return 0;
+	return epoll_socket.start_epoll(port, http_handler, backlog, max_events);
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {

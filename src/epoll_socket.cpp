@@ -27,11 +27,11 @@ int EpollSocket::setNonblocking(int fd) {
 };
 
 int EpollSocket::listen_on(int port, int backlog) {
-    int sockfd; /* listen on sock_fd, new connection on new_fd */
-
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
-        exit(1);
+    /* listen on sock_fd, new connection on new_fd */
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    if (sockfd == -1) {
+        LOG_ERROR("socket error:%s", strerror(errno));
+        return -1;
     }
 
     struct sockaddr_in my_addr; /* my address information */
@@ -44,13 +44,13 @@ int EpollSocket::listen_on(int port, int backlog) {
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     if (bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1) {
-        perror("bind");
-        exit(1);
+        LOG_ERROR("bind error:%s", strerror(errno));
+        return -1;
     }
 
     if (listen(sockfd, backlog) == -1) {
-        perror("listen");
-        exit(1);
+        LOG_ERROR("listen error:%s", strerror(errno));
+        return -1;
     }
 
     LOG_INFO("start Server Socket on port : %d", port);
@@ -63,7 +63,7 @@ int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
     socklen_t sin_size = sizeof(struct sockaddr_in);
 
     if ((new_fd = accept(sockfd, (struct sockaddr *) &their_addr, &sin_size)) == -1) {
-        perror("accept");
+        LOG_ERROR("accept error:%s", strerror(errno));
         return -1;
     }
 
@@ -157,6 +157,9 @@ EpollSocket::EpollSocket() {
 
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     int sockfd = this->listen_on(port, backlog);
+    if (sockfd == -1) {
+        return -1;
+    }
 
     int epollfd = epoll_create(1024);
     if (epollfd == -1) {
