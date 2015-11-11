@@ -2,9 +2,10 @@
 .project
 .settings
 Debug
-bin
+output
 log
 tags
+deps/simple_log/bin/
 
 # Compiled Object files
 *.slo
@@ -27,7 +28,7 @@ tags
 # Compiled Static libraries
 *.lai
 *.la
-#*.a
+*.a
 *.lib
 
 # Executables
