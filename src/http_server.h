@@ -65,6 +65,8 @@ public:
 
 	void set_schedule(ScheduleHandlerPtr h);
 
+    void add_bind_ip(std::string ip);
+
 	int start(int port, int backlog = 10, int max_events = 1000);
 
 };

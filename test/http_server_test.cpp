@@ -65,6 +65,8 @@ int main(int argc, char **args) {
 	int backlog = 100000;
 	int max_events = 1000;
 
+    http_server.add_bind_ip("127.0.0.1");
+    http_server.add_bind_ip("192.168.238.158");
 	http_server.start(port, backlog, max_events);
 	return 0;
 }

@@ -9,6 +9,10 @@
 #define TCP_EPOLL_H_
 
 #include "sys/epoll.h"
+#include <vector>
+#include <set>
+#include <string>
+
 #define SS_WRITE_BUFFER_SIZE 4096
 #define SS_READ_BUFFER_SIZE 4096
 
@@ -52,7 +56,9 @@ private:
 
 	int accept_socket(int sockfd, std::string &client_ip);
 
-	int listen_on(int port, int backlog);
+    int bind_on(unsigned int ip);
+
+	int listen_on();
 
 	int close_and_release(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
@@ -63,12 +69,20 @@ private:
 	int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
 	ScheduleHandlerPtr _schedule_handler;
+
+    std::vector<std::string> _bind_ips;
+
+    int _backlog;
+    int _port;
+    std::set<int> _listen_sockets;
 public:
 	EpollSocket();
 
 	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
 	void set_schedule(ScheduleHandlerPtr h);
+
+    void add_bind_ip(std::string ip);
 };
 
 #endif /* TCP_EPOLL_H_ */

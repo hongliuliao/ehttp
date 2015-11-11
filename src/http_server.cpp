@@ -38,6 +38,10 @@ void HttpServer::set_schedule(ScheduleHandlerPtr h) {
     epoll_socket.set_schedule(h);
 }
 
+void HttpServer::add_bind_ip(std::string ip) {
+    epoll_socket.add_bind_ip(ip);
+}
+
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
 	Resource resource = {method, handler, NULL};
 	resource_map[path] = resource;

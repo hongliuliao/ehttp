@@ -26,35 +26,54 @@ int EpollSocket::setNonblocking(int fd) {
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 };
 
-int EpollSocket::listen_on(int port, int backlog) {
+int EpollSocket::bind_on(unsigned int ip) {
     /* listen on sock_fd, new connection on new_fd */
     int sockfd = socket(AF_INET, SOCK_STREAM, 0); 
     if (sockfd == -1) {
         LOG_ERROR("socket error:%s", strerror(errno));
         return -1;
     }
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     struct sockaddr_in my_addr; /* my address information */
     memset (&my_addr, 0, sizeof(my_addr));
     my_addr.sin_family = AF_INET; /* host byte order */
-    my_addr.sin_port = htons(port); /* short, network byte order */
-    my_addr.sin_addr.s_addr = INADDR_ANY; /* auto-fill with my IP */
-
-    int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    my_addr.sin_port = htons(_port); /* short, network byte order */
+    my_addr.sin_addr.s_addr = ip;    
 
     if (bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1) {
         LOG_ERROR("bind error:%s", strerror(errno));
         return -1;
     }
-
-    if (listen(sockfd, backlog) == -1) {
+    if (listen(sockfd, _backlog) == -1) {
         LOG_ERROR("listen error:%s", strerror(errno));
         return -1;
     }
+    _listen_sockets.insert(sockfd);
+    return 0;
+}
 
-    LOG_INFO("start Server Socket on port : %d", port);
-    return sockfd;
+int EpollSocket::listen_on() {
+    if (_bind_ips.empty()) {
+        int ret = bind_on(INADDR_ANY); /* auto-fill with my IP */
+        if (ret != 0) {
+            return ret;
+        }
+        LOG_INFO("bind for all ip (0.0.0.0)!");
+    } else {
+        for (size_t i = 0; i < _bind_ips.size(); i++) {
+            unsigned ip = inet_addr(_bind_ips[i].c_str()); 
+            int ret = bind_on(ip);
+            if (ret != 0) {
+                return ret;
+            }
+            LOG_INFO("bind for ip:%s success", _bind_ips[i].c_str());
+        }
+    }
+
+    LOG_INFO("start Server Socket on port : %d", _port);
+    return 0;
 }
 
 int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
@@ -156,9 +175,11 @@ EpollSocket::EpollSocket() {
 }
 
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
-    int sockfd = this->listen_on(port, backlog);
-    if (sockfd == -1) {
-        return -1;
+    _backlog = backlog;
+    _port = port;
+    int ret = this->listen_on();
+    if (ret != 0) {
+        return ret;
     }
 
     int epollfd = epoll_create(1024);
@@ -167,12 +188,15 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         return -1;
     }
 
-    struct epoll_event ev;
-    ev.events = EPOLLIN;
-    ev.data.fd = sockfd;
-    if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
-        LOG_ERROR("epoll_ctl: listen_sock:%s", strerror(errno));
-        return -1;
+    for (std::set<int>::iterator i = _listen_sockets.begin(); i != _listen_sockets.end(); i++) {
+        int sockfd = *i;
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = sockfd;
+        if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
+            LOG_ERROR("epoll_ctl: listen_sock:%s", strerror(errno));
+            return -1;
+        }
     }
 
     epoll_event *events = new epoll_event[max_events];
@@ -188,7 +212,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         }
 
         for (int i = 0; i < fds_num; i++) {
-            if(events[i].data.fd == sockfd) {
+            if(_listen_sockets.count(events[i].data.fd)) {
                 // accept connection
                 this->handle_accept_event(epollfd, events[i], socket_handler);
             } else if(events[i].events & EPOLLIN ){
@@ -233,4 +257,8 @@ int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, Epoll
 
 void EpollSocket::set_schedule(ScheduleHandlerPtr h) {
     this->_schedule_handler = h;
+}
+
+void EpollSocket::add_bind_ip(std::string ip) {
+    _bind_ips.push_back(ip);
 }
