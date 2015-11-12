@@ -11,6 +11,6 @@
 #include <string>
 #include <map>
 
-int get_config_map(char *config_file, std::map<std::string, std::string> &configs);
+int get_config_map(const char *config_file, std::map<std::string, std::string> &configs);
 
 #endif /* SIMPLE_CONFIG_H_ */

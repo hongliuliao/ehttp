@@ -3,8 +3,8 @@
 CXX=g++
 CXXFLAGS += -g -Wall
 
-DEPS_INCLUDE_PATH=-I deps/simple_log/bin/include/ -I deps/json-cpp/include/ -I deps/http-parser/
-DEPS_LIB_PATH=deps/simple_log/bin/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
+DEPS_INCLUDE_PATH=-I deps/simple_log/output/include/ -I deps/json-cpp/include/ -I deps/http-parser/
+DEPS_LIB_PATH=deps/simple_log/output/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
 SRC_INCLUDE_PATH=-I src
 OUTPUT_INCLUDE_PATH=-I output/include
 OUTPUT_LIB_PATH=output/lib/libsimpleserver.a

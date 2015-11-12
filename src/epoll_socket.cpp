@@ -129,18 +129,23 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     memset(read_buffer, 0, buffer_size);
 
     int read_size = recv(fd, read_buffer, buffer_size, 0);
-
     int handle_ret = 0;
-    if(read_size > 0) {
+    if (read_size == -1 && errno == EINTR) {
+        handle_ret = READ_CONTINUE; 
+        goto for_handle_ret;
+    } 
+
+    if (read_size > 0) {
         LOG_DEBUG("read success which read size:%d", read_size);
         handle_ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
     }
 
-    if(read_size <= 0 /* connect close or io error*/ || handle_ret < 0) {
+    if (read_size <= 0 /* connect close or io error*/ || handle_ret < 0) {
         close_and_release(epollfd, event, socket_handler);
         return 0;
     }
 
+for_handle_ret:
     if (handle_ret == READ_CONTINUE) {
         event.events = EPOLLIN;
     } else {
@@ -201,9 +206,12 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
     epoll_event *events = new epoll_event[max_events];
 
-    while(1) {
+    while (1) {
         int fds_num = epoll_wait(epollfd, events, max_events, 1000);
-        if(fds_num == -1) {
+        if (fds_num == -1) {
+            if (errno == EINTR) { /*The call was interrupted by a signal handler*/
+                continue;
+            }
             LOG_ERROR("epoll_pwait:%s", strerror(errno));
             return -1;
         }

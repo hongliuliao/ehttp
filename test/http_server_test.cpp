@@ -53,6 +53,7 @@ int main(int argc, char **args) {
         LOG_ERROR("usage: ./http_server_test [port]");
         return -1;
     }
+    log_init();
     HttpServer http_server;
 
     http_server.add_mapping("/hello", hello);

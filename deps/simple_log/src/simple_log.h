@@ -35,6 +35,7 @@ extern int log_level;
 
 std::string _get_show_time();
 
+int log_init();
 void log_error(const char *format, ...);
 void log_warn(const char *format, ...);
 void log_info(const char *format, ...);

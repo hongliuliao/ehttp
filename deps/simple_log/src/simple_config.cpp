@@ -8,7 +8,7 @@
 #include <sstream>
 #include "simple_config.h"
 
-int get_config_map(char *config_file, std::map<std::string, std::string> &configs) {
+int get_config_map(const char *config_file, std::map<std::string, std::string> &configs) {
     std::ifstream fs(config_file);
     if(!fs.is_open()) {
         return -1;
@@ -18,6 +18,9 @@ int get_config_map(char *config_file, std::map<std::string, std::string> &config
         std::string line;
         std::getline(fs, line);
 
+        if (line[0] == '#') {
+            continue;
+        }
         std::stringstream ss;
         ss << line;
         std::string key, value;
