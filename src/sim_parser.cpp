@@ -204,7 +204,7 @@ int ss_on_header_value(http_parser *p, const char *buf, size_t len) {
     } else {
         req->header_values[req->header_values.size() - 1] += value; 
     } 
-    LOG_INFO("GET value:%s", value.c_str());
+    LOG_DEBUG("GET value:%s", value.c_str());
     req->last_was_value = true;
     return 0;
 }
