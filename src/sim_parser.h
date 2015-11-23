@@ -33,9 +33,9 @@ const static int PARSE_REQ_HEAD = 1;
 const static int PARSE_REQ_BODY = 2;
 const static int PARSE_REQ_OVER = 3;
 const static int PARSE_REQ_HEAD_OVER = 4;
-const static int PARSE_LEN_REQUIRED = -2;
 
 const static int NEED_MORE_STATUS = 1;
+const static int PARSE_LEN_REQUIRED = 2;
 
 class RequestParam {
 private:
@@ -128,6 +128,8 @@ public:
 	int clear();
 
     RequestBody *get_body();
+
+    std::string get_method();
     
     bool last_was_value;
     
@@ -136,6 +138,8 @@ public:
     std::vector<std::string> header_values;
 	
     int parse_part;
+
+    int _parse_err;
 	
     RequestLine line;
 

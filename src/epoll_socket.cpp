@@ -123,32 +123,15 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
-
-    int buffer_size = SS_READ_BUFFER_SIZE;
-    char read_buffer[buffer_size];
-    memset(read_buffer, 0, buffer_size);
-
-    int read_size = recv(fd, read_buffer, buffer_size, 0);
-    int handle_ret = 0;
-    if (read_size == -1 && errno == EINTR) {
-        handle_ret = READ_CONTINUE; 
-        goto for_handle_ret;
-    } 
-
-    if (read_size > 0) {
-        LOG_DEBUG("read success which read size:%d", read_size);
-        handle_ret = socket_handler.on_readable(*epoll_context, read_buffer, buffer_size, read_size);
-    }
-
-    if (read_size <= 0 /* connect close or io error*/ || handle_ret < 0) {
+    
+    int ret = socket_handler.on_readable(*epoll_context);
+    if (ret == READ_CLOSE) {
         close_and_release(epollfd, event, socket_handler);
         return 0;
     }
-
-for_handle_ret:
-    if (handle_ret == READ_CONTINUE) {
+    if (ret == READ_CONTINUE) {
         event.events = EPOLLIN;
-    } else {
+    } else { // READ_OVER
         event.events = EPOLLOUT;
     }
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
@@ -198,7 +181,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         struct epoll_event ev;
         ev.events = EPOLLIN;
         ev.data.fd = sockfd;
-        if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
+        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
             LOG_ERROR("epoll_ctl: listen_sock:%s", strerror(errno));
             return -1;
         }

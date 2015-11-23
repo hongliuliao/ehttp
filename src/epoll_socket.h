@@ -22,6 +22,7 @@
 
 #define READ_OVER 0
 #define READ_CONTINUE 1
+#define READ_CLOSE -1
 
 class EpollContext {
 public:
@@ -36,7 +37,7 @@ class EpollSocketWatcher {
 public:
 	virtual int on_accept(EpollContext &epoll_context) = 0;
 
-	virtual int on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) = 0;
+	virtual int on_readable(EpollContext &epoll_context) = 0;
 
 	/**
 	 * return :

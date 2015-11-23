@@ -222,6 +222,10 @@ int ss_on_headers_complete(http_parser *p) {
     req->parse_part = PARSE_REQ_HEAD_OVER;
     LOG_DEBUG("HEADERS COMPLETE! which field size:%u, value size:%u",
         req->header_fields.size(), req->header_values.size());
+    if (req->get_method() == "POST" && req->get_header("Content-Length").empty()) {
+        req->_parse_err = PARSE_LEN_REQUIRED;
+        return -1;
+    }
     return 0;
 }
 
@@ -251,6 +255,7 @@ Request::Request() {
     parse_part = PARSE_REQ_LINE;
     total_req_size = 0;
     last_was_value = true; // add new field for first
+    _parse_err = 0;
 
     http_parser_settings_init(&_settings);
     _settings.on_url = ss_on_url;
@@ -283,6 +288,9 @@ int Request::parse_request(const char *read_buffer, int read_size) {
     }
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
 
+    if (_parse_err) {
+        return _parse_err;
+    }
     if (parse_part != PARSE_REQ_OVER) {
         return NEED_MORE_STATUS;
     }
@@ -291,6 +299,10 @@ int Request::parse_request(const char *read_buffer, int read_size) {
 
 RequestBody *Request::get_body() {
     return &_body;
+}
+
+std::string Request::get_method() {
+    return line.method;
 }
 
 Response::Response(CodeMsg status_code) {

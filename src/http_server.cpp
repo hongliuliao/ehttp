@@ -89,25 +89,42 @@ int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 	return 0;
 }
 
-int HttpEpollWatcher::on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) {
+int HttpEpollWatcher::on_readable(EpollContext &epoll_context) {
+    int fd = epoll_context.fd;
+
+    int buffer_size = SS_READ_BUFFER_SIZE;
+    char read_buffer[buffer_size];
+    memset(read_buffer, 0, buffer_size);
+
+    int read_size = recv(fd, read_buffer, buffer_size, 0);
+    if (read_size == -1 && errno == EINTR) {
+        return READ_CONTINUE; 
+    } 
+    if (read_size == -1 /* io err*/|| read_size == 0 /* close */) {
+        return READ_CLOSE;
+    }
+    LOG_DEBUG("read success which read size:%d", read_size);
 	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
 	if (http_context->get_requset().parse_part == PARSE_REQ_LINE) {
         http_context->record_start_time();
 	}
 
 	int ret = http_context->get_requset().parse_request(read_buffer, read_size);
-	if (ret != 0) {
-		return ret;
-	}
+    if (ret < 0) {
+        return READ_CLOSE;
+    }
+    if (ret == NEED_MORE_STATUS) {
+        return READ_CONTINUE;
+    }
     if (ret == PARSE_LEN_REQUIRED) {
         http_context->get_res().code_msg = STATUS_LENGTH_REQUIRED;
         http_context->get_res().body = STATUS_LENGTH_REQUIRED.msg;
-        return 0;
+        return READ_OVER;
     } 
 
 	this->handle_request(http_context->get_requset(), http_context->get_res());
 
-	return 0;
+	return READ_OVER;
 }
 
 int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {

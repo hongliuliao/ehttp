@@ -46,7 +46,7 @@ public:
 
 	virtual int on_accept(EpollContext &epoll_context) ;
 
-	virtual int on_readable(EpollContext &epoll_context, char *read_buffer, int buffer_size, int read_size) ;
+	virtual int on_readable(EpollContext &epoll_context) ;
 
 	virtual int on_writeable(EpollContext &epoll_context) ;
 
