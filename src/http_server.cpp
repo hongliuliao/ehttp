@@ -146,7 +146,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	int ret = res.readsome(buffer, SS_WRITE_BUFFER_SIZE, read_size);
 	// 2. write bytes to socket
 	int nwrite = send(fd, buffer, read_size, 0);
-	if(nwrite < 0) {
+	if (nwrite < 0) {
 		perror("send fail!");
 		return WRITE_CONN_CLOSE;
 	}
@@ -156,15 +156,12 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 	}
 	LOG_DEBUG("send complete which write_num:%d, read_size:%d", nwrite, read_size);
 
-	bool print_access_log = true;
-
 	if (ret == 1) {/* not send over*/
-	    print_access_log = false;
 	    LOG_DEBUG("has big response, we will send part first and send other part later ...");
 	    return WRITE_CONN_CONTINUE;
 	}
 
-	if (print_access_log) {
+	if (ret == 0 && nwrite == read_size) {
         hc->print_access_log(epoll_context.client_ip);
 	}
 
