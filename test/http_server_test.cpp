@@ -49,11 +49,15 @@ void test_schedule() {
 }
 
 int main(int argc, char **args) {
+    int ret = log_init("./conf", "simple_log.conf");
+    if (ret != 0) {
+        printf("log init error!");
+        return 0;
+    }
     if (argc < 2) {
         LOG_ERROR("usage: ./http_server_test [port]");
         return -1;
     }
-    log_init();
     HttpServer http_server;
 
     http_server.add_mapping("/hello", hello);
