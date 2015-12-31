@@ -1,11 +1,6 @@
-.cproject
-.project
-.settings
-Debug
 output
 log
 tags
-deps/simple_log/bin/
 
 # Compiled Object files
 *.slo
