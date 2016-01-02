@@ -15,8 +15,7 @@
 #include "simple_log.h"
 
 // log context
-const int max_single_log_size = 2048;
-char single_log[max_single_log_size];
+const int MAX_SINGLE_LOG_SIZE = 2048;
 const int ONE_DAY_SECONDS = 86400;
 
 int log_level = DEBUG_LEVEL;
@@ -57,8 +56,8 @@ int FileAppender::init(std::string dir, std::string log_file) {
 
 int FileAppender::write_log(char *log, const char *format, va_list ap) {
     if (_fs.is_open()) {
-        vsprintf(single_log, format, ap);
-        _fs << single_log << "\n";
+        vsnprintf(log, MAX_SINGLE_LOG_SIZE - 1, format, ap);
+        _fs << log << "\n";
         _fs.flush();
     }
     return 0;
@@ -72,18 +71,18 @@ int FileAppender::shift_file_if_need(struct timeval tv, struct timezone tz) {
     long fix_now_sec = tv.tv_sec - tz.tz_minuteswest * 60;
     long fix_last_sec = _last_sec - tz.tz_minuteswest * 60;
     if (fix_now_sec / ONE_DAY_SECONDS - fix_last_sec / ONE_DAY_SECONDS) {
-        _fs.close();    
-        
         struct tm *tm;
-        tm = localtime(&tv.tv_sec);
+        time_t y_sec = tv.tv_sec - ONE_DAY_SECONDS;
+        tm = localtime(&y_sec); //yesterday
         char new_file[100];
-        memset(new_file, 0, 100);
+        bzero(new_file, 100);
         sprintf(new_file, "%s.%04d-%02d-%02d",
                 _log_file.c_str(), 
-                tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday - 1/*last day*/);
+                tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
         std::string new_file_path = _log_dir + "/" + new_file;
         rename(_log_file_path.c_str(), new_file_path.c_str());
         
+        _fs.close();    
         _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
 
         delete_old_log(tv);
@@ -196,6 +195,8 @@ void _log(const char *format, va_list ap) {
     std::string fin_format = _get_show_time(now) + " " + format;
     
     g_file_appender.shift_file_if_need(now, tz);
+    char single_log[MAX_SINGLE_LOG_SIZE];
+    bzero(single_log, MAX_SINGLE_LOG_SIZE);
     g_file_appender.write_log(single_log, fin_format.c_str(), ap);
 }
 
