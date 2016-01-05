@@ -46,7 +46,7 @@ public:
 
 	virtual int on_accept(EpollContext &epoll_context) ;
 
-	virtual int on_readable(EpollContext &epoll_context) ;
+	virtual int on_readable(int &epollfd, epoll_event &event) ;
 
 	virtual int on_writeable(EpollContext &epoll_context) ;
 
@@ -68,6 +68,8 @@ public:
     void add_bind_ip(std::string ip);
 
 	int start(int port, int backlog = 10, int max_events = 1000);
+
+    void set_pool_size(int pool_size);
 
 };
 

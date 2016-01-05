@@ -59,6 +59,7 @@ int main(int argc, char **args) {
         return -1;
     }
     HttpServer http_server;
+    http_server.set_pool_size(4);
 
     http_server.add_mapping("/hello", hello);
     http_server.add_mapping("/usleep", usleep);

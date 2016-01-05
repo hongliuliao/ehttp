@@ -120,25 +120,56 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     return 0;
 }
 
-int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+void read_func(void *data) {
+    TaskData *tdata = (TaskData *)data;
+    int epollfd = tdata->epollfd;
+    epoll_event event = (tdata->event);
+    EpollSocketWatcher &socket_handler = *(tdata->watcher);
+
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     
-    int ret = socket_handler.on_readable(*epoll_context);
+    int ret = socket_handler.on_readable(epollfd, event);
     if (ret == READ_CLOSE) {
         close_and_release(epollfd, event, socket_handler);
-        return 0;
+        delete tdata;
+        return;
     }
     if (ret == READ_CONTINUE) {
         event.events = EPOLLIN;
-    } else { // READ_OVER
+        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+    } else if (ret == READ_OVER) { // READ_OVER
         event.events = EPOLLOUT;
+        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+    } else {
+        LOG_ERROR("unkonw ret!");
     }
-    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    delete tdata;
+    return;
+}
+
+int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
+    
+    TaskData *tdata = new TaskData();
+    tdata->epollfd = epollfd;
+    tdata->event = event;
+    tdata->watcher = &socket_handler;
+
+    Task *task = new Task(read_func, tdata);
+    _thread_pool.add_task(task);
+    
     return 0;
 }
 
-int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+void write_func(void *data) {
+    TaskData *tdata = (TaskData *)data;
+    int epollfd = tdata->epollfd;
+    epoll_event event = (tdata->event);
+    EpollSocketWatcher &socket_handler = *(tdata->watcher);
+
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
@@ -146,7 +177,8 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     int ret = socket_handler.on_writeable(*epoll_context);
     if(ret == WRITE_CONN_CLOSE) {
         close_and_release(epollfd, event, socket_handler);
-        return 0;
+        delete tdata;
+        return;
     }
 
     if (ret == WRITE_CONN_CONTINUE) {
@@ -154,12 +186,31 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     } else {
         event.events = EPOLLIN;
     }
-    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+    delete tdata;
+}
+
+int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
+    
+    TaskData *tdata = new TaskData();
+    tdata->epollfd = epollfd;
+    tdata->event = event;
+    tdata->watcher = &socket_handler;
+
+    Task *task = new Task(write_func, tdata);
+    _thread_pool.add_task(task);
     return 0;
 }
 
 EpollSocket::EpollSocket() {
     this->_schedule_handler = NULL;
+}
+
+void EpollSocket::set_pool_size(int pool_size) {
+   this->_thread_pool.init(pool_size); 
 }
 
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
@@ -188,7 +239,6 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     }
 
     epoll_event *events = new epoll_event[max_events];
-
     while (1) {
         int fds_num = epoll_wait(epollfd, events, max_events, 1000);
         if (fds_num == -1) {
@@ -217,14 +267,14 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
             }
         }
     }
-
     if (events != NULL) {
         delete[] events;
         events = NULL;
     }
+
 }
 
-int EpollSocket::close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
+int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
     if(epoll_event.data.ptr == NULL) {
         return 0;
     }

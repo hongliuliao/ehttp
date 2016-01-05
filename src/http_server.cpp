@@ -42,6 +42,10 @@ void HttpServer::add_bind_ip(std::string ip) {
     epoll_socket.add_bind_ip(ip);
 }
 
+void HttpServer::set_pool_size(int pool_size) {
+    epoll_socket.set_pool_size(pool_size);
+}
+
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
 	Resource resource = {method, handler, NULL};
 	resource_map[path] = resource;
@@ -89,8 +93,9 @@ int HttpEpollWatcher::on_accept(EpollContext &epoll_context) {
 	return 0;
 }
 
-int HttpEpollWatcher::on_readable(EpollContext &epoll_context) {
-    int fd = epoll_context.fd;
+int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
 
     int buffer_size = SS_READ_BUFFER_SIZE;
     char read_buffer[buffer_size];
@@ -104,7 +109,7 @@ int HttpEpollWatcher::on_readable(EpollContext &epoll_context) {
         return READ_CLOSE;
     }
     LOG_DEBUG("read success which read size:%d", read_size);
-	HttpContext *http_context = (HttpContext *) epoll_context.ptr;
+	HttpContext *http_context = (HttpContext *) epoll_context->ptr;
 	if (http_context->get_requset().parse_part == PARSE_REQ_LINE) {
         http_context->record_start_time();
 	}

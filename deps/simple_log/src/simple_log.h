@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include "sys/time.h"
+#include <pthread.h>
 
 const int ERROR_LEVEL = 1;
 const int WARN_LEVEL = 2;
@@ -62,6 +63,7 @@ class FileAppender {
         long _last_sec;
         bool _is_inited;
         int _retain_day;
+        pthread_rwlock_t rwlock;
 };
 
 #endif

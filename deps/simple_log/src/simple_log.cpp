@@ -51,15 +51,18 @@ int FileAppender::init(std::string dir, std::string log_file) {
     _log_file_path = dir + "/" + log_file;
     _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
     _is_inited = true;
+    pthread_rwlock_init(&rwlock, NULL);
     return 0;
 }
 
 int FileAppender::write_log(char *log, const char *format, va_list ap) {
+    pthread_rwlock_rdlock(&rwlock);
     if (_fs.is_open()) {
         vsnprintf(log, MAX_SINGLE_LOG_SIZE - 1, format, ap);
         _fs << log << "\n";
         _fs.flush();
     }
+    pthread_rwlock_unlock(&rwlock);
     return 0;
 }
 
@@ -71,6 +74,8 @@ int FileAppender::shift_file_if_need(struct timeval tv, struct timezone tz) {
     long fix_now_sec = tv.tv_sec - tz.tz_minuteswest * 60;
     long fix_last_sec = _last_sec - tz.tz_minuteswest * 60;
     if (fix_now_sec / ONE_DAY_SECONDS - fix_last_sec / ONE_DAY_SECONDS) {
+        pthread_rwlock_wrlock(&rwlock);
+        
         struct tm *tm;
         time_t y_sec = tv.tv_sec - ONE_DAY_SECONDS;
         tm = localtime(&y_sec); //yesterday
@@ -80,10 +85,14 @@ int FileAppender::shift_file_if_need(struct timeval tv, struct timezone tz) {
                 _log_file.c_str(), 
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
         std::string new_file_path = _log_dir + "/" + new_file;
-        rename(_log_file_path.c_str(), new_file_path.c_str());
+        if (access(new_file_path.c_str(), F_OK) != 0) {
+            rename(_log_file_path.c_str(), new_file_path.c_str());
+            // reopen new log file
+            _fs.close();    
+            _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
+        }
         
-        _fs.close();    
-        _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
+        pthread_rwlock_unlock(&rwlock);
 
         delete_old_log(tv);
     }

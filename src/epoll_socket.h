@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include "threadpool.h"
 
 #define SS_WRITE_BUFFER_SIZE 4096
 #define SS_READ_BUFFER_SIZE 4096
@@ -37,7 +38,7 @@ class EpollSocketWatcher {
 public:
 	virtual int on_accept(EpollContext &epoll_context) = 0;
 
-	virtual int on_readable(EpollContext &epoll_context) = 0;
+	virtual int on_readable(int &epollfd, epoll_event &event) = 0;
 
 	/**
 	 * return :
@@ -50,9 +51,16 @@ public:
 
 };
 
+struct TaskData {
+    int epollfd;
+    epoll_event event;
+    EpollSocketWatcher *watcher;
+};
+
+int close_and_release(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+
 class EpollSocket {
 private:
-
 	int setNonblocking(int fd);
 
 	int accept_socket(int sockfd, std::string &client_ip);
@@ -60,8 +68,6 @@ private:
     int bind_on(unsigned int ip);
 
 	int listen_on();
-
-	int close_and_release(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
 	int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
@@ -76,10 +82,13 @@ private:
     int _backlog;
     int _port;
     std::set<int> _listen_sockets;
+    ThreadPool _thread_pool;
 public:
 	EpollSocket();
 
 	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
+
+    void set_pool_size(int pool_size);
 
 	void set_schedule(ScheduleHandlerPtr h);
 

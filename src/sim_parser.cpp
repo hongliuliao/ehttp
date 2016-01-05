@@ -179,7 +179,7 @@ int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
         if (p->http_major == 1 && p->http_minor == 1) {
             req->line.http_version = "HTTP/1.1";
         }
-        parse_part = PARSE_REQ_HEAD;
+        req->parse_part = PARSE_REQ_HEAD;
     }
 
     std::string field;
@@ -277,6 +277,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
         return -1;
     }
+    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
     ssize_t nparsed = http_parser_execute(&_parser, &_settings, read_buffer, read_size);
     if (nparsed != read_size) {
         std::string err_msg = "unkonw";
@@ -286,7 +287,6 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         LOG_ERROR("parse request error! msg:%s", err_msg.c_str());
         return -1;
     }
-    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
 
     if (_parse_err) {
         return _parse_err;

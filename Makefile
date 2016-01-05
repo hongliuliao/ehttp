@@ -2,6 +2,7 @@
 
 CXX=g++
 CXXFLAGS += -g -Wall
+LDFLAGS += -lpthread
 
 DEPS_INCLUDE_PATH=-I deps/simple_log/output/include/ -I deps/json-cpp/include/ -I deps/http-parser/
 DEPS_LIB_PATH=deps/simple_log/output/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
@@ -31,10 +32,10 @@ test: http_server_test http_parser_test
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
 
 http_server_test: test/http_server_test.cpp
-	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 	
 http_parser_test: test/http_parser_test.cpp
-	$(CXX) $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
 clean:
 	rm -rf output/*
