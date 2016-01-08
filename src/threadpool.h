@@ -67,6 +67,10 @@ private:
   void* m_arg;
 };
 
+typedef void *(*user_thread_data_fn)();
+
+extern pthread_key_t g_tp_key;
+
 class ThreadPool
 {
 public:
@@ -76,6 +80,8 @@ public:
   int destroy_threadpool();
   void* execute_thread();
   int add_task(Task* task);
+  void set_utd_fn(user_thread_data_fn f);
+  user_thread_data_fn m_ufn;
 private:
   int m_pool_size;
   Mutex m_task_mutex;

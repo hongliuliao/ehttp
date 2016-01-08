@@ -89,6 +89,8 @@ public:
 	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
     void set_pool_size(int pool_size);
+    
+    void set_utd_fn(user_thread_data_fn f);
 
 	void set_schedule(ScheduleHandlerPtr h);
 

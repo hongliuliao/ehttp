@@ -46,6 +46,10 @@ void HttpServer::set_pool_size(int pool_size) {
     epoll_socket.set_pool_size(pool_size);
 }
 
+void HttpServer::set_utd_fn(user_thread_data_fn f) {
+    epoll_socket.set_utd_fn(f);
+}
+
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
 	Resource resource = {method, handler, NULL};
 	resource_map[path] = resource;
@@ -68,7 +72,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
 	Resource resource = this->resource_map[req.get_request_uri()];
 	// check method
 	HttpMethod method = resource.method;
-	if(method.name != req.line.method) {
+	if (method.name != req.line.method) {
 		res.code_msg = STATUS_METHOD_NOT_ALLOWED;
 		res.set_head("Allow", method.name);
 		res.body.clear();

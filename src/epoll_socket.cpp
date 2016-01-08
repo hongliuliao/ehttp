@@ -213,6 +213,11 @@ void EpollSocket::set_pool_size(int pool_size) {
    this->_thread_pool.init(pool_size); 
 }
 
+void EpollSocket::set_utd_fn(user_thread_data_fn f) {
+    this->_thread_pool.set_utd_fn(f);
+    LOG_INFO("set utd fn ...");
+}
+
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     _backlog = backlog;
     _port = port;

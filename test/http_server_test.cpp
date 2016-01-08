@@ -9,8 +9,24 @@
 #include "simple_log.h"
 #include "http_server.h"
 
+int g_a = 0;
+
+void *a_test_fn() {
+    LOG_INFO("start thread data function ...");
+    g_a++;
+    int *a = new int();
+    *a = g_a;
+    return a;
+}
+
 void hello(Request &request, Json::Value &root) {
 	root["hello"] = "world";
+    int *tmp = (int*)pthread_getspecific(g_tp_key); 
+    if (tmp == NULL) {
+        LOG_INFO("not thread data");
+        return;
+    }
+    LOG_INFO("get thread data:%d", *tmp);
 }
 
 void sayhello(Request &request, Json::Value &root) {
@@ -59,6 +75,7 @@ int main(int argc, char **args) {
         return -1;
     }
     HttpServer http_server;
+    http_server.set_utd_fn(&a_test_fn);
     http_server.set_pool_size(4);
 
     http_server.add_mapping("/hello", hello);
