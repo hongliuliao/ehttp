@@ -82,15 +82,13 @@ private:
     int _backlog;
     int _port;
     std::set<int> _listen_sockets;
-    ThreadPool _thread_pool;
+    ThreadPool *_thread_pool;
 public:
 	EpollSocket();
 
 	int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
-    void set_pool_size(int pool_size);
-    
-    void set_utd_fn(user_thread_data_fn f);
+    void set_thread_pool(ThreadPool *tp);
 
 	void set_schedule(ScheduleHandlerPtr h);
 

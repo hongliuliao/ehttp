@@ -69,9 +69,7 @@ public:
 
 	int start(int port, int backlog = 10, int max_events = 1000);
 
-    void set_pool_size(int pool_size);
-    /* set user thread data function */
-    void set_utd_fn(user_thread_data_fn f);
+    void set_thread_pool(ThreadPool *tp);
 
 };
 

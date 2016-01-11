@@ -18,7 +18,7 @@ void Task::run()
 }
 
 ThreadPool::ThreadPool() {
-    m_ufn = NULL;
+    m_scb = NULL;
 }
 
 ThreadPool::~ThreadPool()
@@ -36,23 +36,20 @@ extern "C"
 void* start_thread(void* arg)
 {
     ThreadPool* tp = (ThreadPool *)arg;
-    if (tp->m_ufn != NULL) {
-        pthread_setspecific(g_tp_key, tp->m_ufn());
+    if (tp->m_scb != NULL) {
+        tp->m_scb();
     } else {
-        LOG_DEBUG("thread data func is null");
+        LOG_DEBUG("thread start cb is null");
     }
     tp->execute_thread();
     return NULL;
 }
-
-pthread_key_t g_tp_key;
 
 int ThreadPool::init(int pool_size)
 {
     m_pool_size = pool_size;
     m_pool_state = STARTED;
     int ret = -1;
-    pthread_key_create(&g_tp_key,NULL); 
     for (int i = 0; i < m_pool_size; i++) {
         pthread_t tid;
         ret = pthread_create(&tid, NULL, start_thread, (void*) this);
@@ -67,8 +64,8 @@ int ThreadPool::init(int pool_size)
     return 0;
 }
 
-void ThreadPool::set_utd_fn(user_thread_data_fn f) {
-    m_ufn = f;
+void ThreadPool::set_thread_start_cb(thread_start_callback f) {
+    m_scb = f;
 }
 
 int ThreadPool::destroy_threadpool()

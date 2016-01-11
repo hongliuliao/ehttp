@@ -63,7 +63,7 @@ class FileAppender {
         long _last_sec;
         bool _is_inited;
         int _retain_day;
-        pthread_rwlock_t rwlock;
+        pthread_mutex_t writelock;
 };
 
 #endif

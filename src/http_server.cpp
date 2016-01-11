@@ -42,12 +42,8 @@ void HttpServer::add_bind_ip(std::string ip) {
     epoll_socket.add_bind_ip(ip);
 }
 
-void HttpServer::set_pool_size(int pool_size) {
-    epoll_socket.set_pool_size(pool_size);
-}
-
-void HttpServer::set_utd_fn(user_thread_data_fn f) {
-    epoll_socket.set_utd_fn(f);
+void HttpServer::set_thread_pool(ThreadPool *tp) {
+    epoll_socket.set_thread_pool(tp);
 }
 
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {

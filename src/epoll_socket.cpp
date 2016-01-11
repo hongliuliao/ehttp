@@ -159,7 +159,7 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     tdata->watcher = &socket_handler;
 
     Task *task = new Task(read_func, tdata);
-    _thread_pool.add_task(task);
+    _thread_pool->add_task(task);
     
     return 0;
 }
@@ -201,7 +201,7 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     tdata->watcher = &socket_handler;
 
     Task *task = new Task(write_func, tdata);
-    _thread_pool.add_task(task);
+    _thread_pool->add_task(task);
     return 0;
 }
 
@@ -209,18 +209,18 @@ EpollSocket::EpollSocket() {
     this->_schedule_handler = NULL;
 }
 
-void EpollSocket::set_pool_size(int pool_size) {
-   this->_thread_pool.init(pool_size); 
-}
-
-void EpollSocket::set_utd_fn(user_thread_data_fn f) {
-    this->_thread_pool.set_utd_fn(f);
-    LOG_INFO("set utd fn ...");
+void EpollSocket::set_thread_pool(ThreadPool *tp) {
+    this->_thread_pool = tp;
 }
 
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     _backlog = backlog;
     _port = port;
+
+    if (_thread_pool == NULL) {
+        LOG_ERROR("Please set thread pool first .");
+        return -1;
+    }
     int ret = this->listen_on();
     if (ret != 0) {
         return ret;
