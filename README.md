@@ -44,7 +44,11 @@ void login(Request &request, Json::Value &root) {
 }
 
 int main() {
-	HttpServer http_server;
+    ThreadPool tp;
+    tp.init(4);
+	
+    HttpServer http_server;
+    http_server.set_thread_pool(&tp);
 
 	http_server.add_mapping("/login", login, POST_METHOD);
 
@@ -62,5 +66,3 @@ liao@ubuntu:~/workspace/ehttp$ curl -d "name=tom&pwd=3" "localhost:3456/login"
 
 ```
 
-## TODO
-1. support thread local args
