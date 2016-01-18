@@ -128,7 +128,7 @@ void read_func(void *data) {
 
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
-    
+
     int ret = socket_handler.on_readable(epollfd, event);
     if (ret == READ_CLOSE) {
         close_and_release(epollfd, event, socket_handler);
@@ -152,7 +152,7 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event); // TODO remove event or use EPOLLLT?
-    
+
     TaskData *tdata = new TaskData();
     tdata->epollfd = epollfd;
     tdata->event = event;
@@ -197,7 +197,7 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
-    
+
     TaskData *tdata = new TaskData();
     tdata->epollfd = epollfd;
     tdata->event = event;

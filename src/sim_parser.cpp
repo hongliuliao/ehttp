@@ -50,10 +50,10 @@ int RequestParam::parse_query_url(std::string &query_url) {
 
 
 std::string RequestLine::get_request_uri() {
-	std::stringstream ss(this->request_url);
-	std::string uri;
-	std::getline(ss, uri, '?');
-	return uri;
+    std::stringstream ss(this->request_url);
+    std::string uri;
+    std::getline(ss, uri, '?');
+    return uri;
 }
 
 int RequestLine::parse_request_url_params() {
@@ -72,11 +72,11 @@ int RequestLine::parse_request_url_params() {
 }
 
 std::string RequestBody::get_param(std::string name) {
-   return _req_params.get_param(name);
+    return _req_params.get_param(name);
 }
 
 void RequestBody::get_params(std::string &name, std::vector<std::string> &params) {
-   return _req_params.get_params(name, params);
+    return _req_params.get_params(name, params);
 }
 
 std::string *RequestBody::get_raw_string() {
@@ -88,18 +88,18 @@ RequestParam *RequestBody::get_req_params() {
 }
 
 std::string Request::get_param(std::string name) {
-	if (line.method == "GET") {
-		return line.get_request_param().get_param(name);
-	}
-	if (line.method == "POST") {
-		return _body.get_param(name);
-	}
-	return "";
+    if (line.method == "GET") {
+        return line.get_request_param().get_param(name);
+    }
+    if (line.method == "POST") {
+        return _body.get_param(name);
+    }
+    return "";
 }
 
 #define ishex(in) ((in >= 'a' && in <= 'f') || \
-                   (in >= 'A' && in <= 'F') || \
-                   (in >= '0' && in <= '9'))
+        (in >= 'A' && in <= 'F') || \
+        (in >= '0' && in <= '9'))
 
 
 int unescape(std::string &param, std::string &unescape_param) {
@@ -140,15 +140,15 @@ void Request::get_params(std::string &name, std::vector<std::string> &params) {
 }
 
 void Request::add_header(std::string &name, std::string &value) {
-	this->headers[name] = value;
+    this->headers[name] = value;
 }
 
 std::string Request::get_header(std::string name) {
-	return this->headers[name];
+    return this->headers[name];
 }
 
 std::string Request::get_request_uri() {
-	return line.get_request_uri();
+    return line.get_request_uri();
 }
 
 int ss_on_url(http_parser *p, const char *buf, size_t len) {
@@ -196,7 +196,7 @@ int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
 
 int ss_on_header_value(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
-    
+
     std::string value;
     value.assign(buf, len);
     if (!req->last_was_value) {
@@ -213,7 +213,7 @@ int ss_on_headers_complete(http_parser *p) {
     Request *req = (Request *) p->data;
     if (req->header_fields.size() != req->header_values.size()) {
         LOG_ERROR("header field size:%u != value size:%u",
-            req->header_fields.size(), req->header_values.size());
+                req->header_fields.size(), req->header_values.size());
         return -1;
     }
     for (size_t i = 0; i < req->header_fields.size(); i++) {
@@ -221,7 +221,7 @@ int ss_on_headers_complete(http_parser *p) {
     }
     req->parse_part = PARSE_REQ_HEAD_OVER;
     LOG_DEBUG("HEADERS COMPLETE! which field size:%u, value size:%u",
-        req->header_fields.size(), req->header_values.size());
+            req->header_fields.size(), req->header_values.size());
     if (req->get_method() == "POST" && req->get_header("Content-Length").empty()) {
         req->_parse_err = PARSE_LEN_REQUIRED;
         return -1;
@@ -306,12 +306,12 @@ std::string Request::get_method() {
 }
 
 Response::Response(CodeMsg status_code) {
-	this->code_msg = status_code;
-	this->is_writed = 0;
+    this->code_msg = status_code;
+    this->is_writed = 0;
 }
 
 void Response::set_head(std::string name, std::string &value) {
-	this->headers[name] = value;
+    this->headers[name] = value;
 }
 
 void Response::set_body(Json::Value &body) {
@@ -321,29 +321,29 @@ void Response::set_body(Json::Value &body) {
 }
 
 int Response::gen_response(std::string &http_version, bool is_keepalive) {
-	LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
-	res_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
-	res_bytes << "Server: SimpleServer/0.1" << "\r\n";
-	if(headers.find("Content-Type") == headers.end()) {
-		res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
-	}
-	res_bytes << "Content-Length: " << body.size() << "\r\n";
+    LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
+    res_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
+    res_bytes << "Server: SimpleServer/0.1" << "\r\n";
+    if(headers.find("Content-Type") == headers.end()) {
+        res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+    }
+    res_bytes << "Content-Length: " << body.size() << "\r\n";
 
-	std::string con_status = "Connection: close";
-	if(is_keepalive) {
-		con_status = "Connection: Keep-Alive";
-	}
-	res_bytes << con_status << "\r\n";
+    std::string con_status = "Connection: close";
+    if(is_keepalive) {
+        con_status = "Connection: Keep-Alive";
+    }
+    res_bytes << con_status << "\r\n";
 
-	for (std::map<std::string, std::string>::iterator it=headers.begin(); it!=headers.end(); ++it) {
-		res_bytes << it->first << ": " << it->second << "\r\n";
-	}
-	// header end
-	res_bytes << "\r\n";
-	res_bytes << body;
+    for (std::map<std::string, std::string>::iterator it=headers.begin(); it!=headers.end(); ++it) {
+        res_bytes << it->first << ": " << it->second << "\r\n";
+    }
+    // header end
+    res_bytes << "\r\n";
+    res_bytes << body;
 
-	LOG_DEBUG("gen response context:%s", res_bytes.str().c_str());
-	return 0;
+    LOG_DEBUG("gen response context:%s", res_bytes.str().c_str());
+    return 0;
 }
 
 int Response::readsome(char *buffer, int buffer_size, int &read_size) {
