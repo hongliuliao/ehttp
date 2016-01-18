@@ -5,6 +5,7 @@ ehttp
 ## 特点
 * base on epoll
 * 强调简洁实用
+* 多线程模型
 
 ## 依赖
  * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
