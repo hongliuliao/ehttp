@@ -75,8 +75,6 @@ private:
 
 	int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
-	ScheduleHandlerPtr _schedule_handler;
-
     std::vector<std::string> _bind_ips;
 
     int _backlog;

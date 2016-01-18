@@ -74,11 +74,13 @@ class ThreadPool
 public:
   ThreadPool();
   ~ThreadPool();
-  int init(int pool_size);
+  int start();
   int destroy_threadpool();
   void* execute_thread();
   int add_task(Task* task);
   void set_thread_start_cb(thread_start_callback f);
+  void set_task_size_limit(int size);
+  void set_pool_size(int pool_size);
   thread_start_callback m_scb;
 private:
   int m_pool_size;
@@ -87,6 +89,7 @@ private:
   std::vector<pthread_t> m_threads; // storage for threads
   std::deque<Task*> m_tasks;
   volatile int m_pool_state;
+  int m_task_size_limit;
 };
 
 #endif /* _H_THREADPOOL */

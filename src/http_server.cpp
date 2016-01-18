@@ -34,10 +34,6 @@ void HttpServer::add_mapping(std::string path, json_handler_ptr handler, HttpMet
     http_handler.add_mapping(path, handler, method);
 }
 
-void HttpServer::set_schedule(ScheduleHandlerPtr h) {
-    epoll_socket.set_schedule(h);
-}
-
 void HttpServer::add_bind_ip(std::string ip) {
     epoll_socket.add_bind_ip(ip);
 }

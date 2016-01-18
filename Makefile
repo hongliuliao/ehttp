@@ -1,4 +1,4 @@
-.PHONY: all test clean deps
+.PHONY: all test clean deps tags
 
 CXX=g++
 CXXFLAGS += -g -Wall
@@ -18,6 +18,9 @@ all: libsimpleserver.a
 	cp src/*.h output/include/
 	mv libsimpleserver.a output/lib/
 	rm -rf src/*.o
+
+tags:
+	ctags -R /usr/include src deps
 
 deps:
 	make -C deps/http-parser package

@@ -63,8 +63,6 @@ public:
 
 	void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
 
-	void set_schedule(ScheduleHandlerPtr h);
-
     void add_bind_ip(std::string ip);
 
 	int start(int port, int backlog = 10, int max_events = 1000);

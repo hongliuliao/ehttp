@@ -83,7 +83,12 @@ int main(int argc, char **args) {
     pthread_key_create(&g_tp_key,NULL); 
     ThreadPool tp;
     tp.set_thread_start_cb(a_test_fn);
-    tp.init(4);
+    tp.set_pool_size(4);
+    ret = tp.start();
+    if (ret != 0) {
+        LOG_ERROR("thread pool start error:%d", ret);
+        return ret;
+    }
 
     HttpServer http_server;
     http_server.set_thread_pool(&tp);
@@ -92,7 +97,6 @@ int main(int argc, char **args) {
     http_server.add_mapping("/usleep", usleep);
     http_server.add_mapping("/sayhello", sayhello);
     http_server.add_mapping("/login", login, POST_METHOD);
-    //http_server.set_schedule(test_schedule);
 
     int port = atoi(args[1]);
     int backlog = 100000;

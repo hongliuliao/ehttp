@@ -19,6 +19,8 @@ void Task::run()
 
 ThreadPool::ThreadPool() {
     m_scb = NULL;
+    m_task_size_limit = -1;
+    m_pool_size = 0;
 }
 
 ThreadPool::~ThreadPool()
@@ -45,9 +47,12 @@ void* start_thread(void* arg)
     return NULL;
 }
 
-int ThreadPool::init(int pool_size)
+int ThreadPool::start()
 {
-    m_pool_size = pool_size;
+    if (m_pool_size == 0) {
+        LOG_ERROR("pool size must be set!");
+        return -1;
+    }
     m_pool_state = STARTED;
     int ret = -1;
     for (int i = 0; i < m_pool_size; i++) {
@@ -59,13 +64,21 @@ int ThreadPool::init(int pool_size)
         }
         m_threads.push_back(tid);
     }
-    LOG_INFO("%d threads created by the thread pool", m_pool_size);
+    LOG_DEBUG("%d threads created by the thread pool", m_pool_size);
 
     return 0;
 }
 
 void ThreadPool::set_thread_start_cb(thread_start_callback f) {
     m_scb = f;
+}
+
+void ThreadPool::set_task_size_limit(int size) {
+    m_task_size_limit = size;
+}
+
+void ThreadPool::set_pool_size(int pool_size) {
+    m_pool_size = pool_size;
 }
 
 int ThreadPool::destroy_threadpool()
@@ -139,7 +152,10 @@ int ThreadPool::add_task(Task* task)
 {
   m_task_mutex.lock();
 
-  // TODO: put a limit on how many tasks can be added at most
+  if (m_task_size_limit > 0 && (int) m_tasks.size() > m_task_size_limit) {
+      LOG_WARN("task size reach limit:%d", m_task_size_limit);
+      return -1;
+  }
   m_tasks.push_back(task);
 
   m_task_cond_var.signal(); // wake up one thread that is waiting for a task to be available

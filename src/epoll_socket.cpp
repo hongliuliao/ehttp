@@ -151,7 +151,7 @@ void read_func(void *data) {
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
+    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event); // TODO remove event or use EPOLLLT?
     
     TaskData *tdata = new TaskData();
     tdata->epollfd = epollfd;
@@ -159,9 +159,12 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     tdata->watcher = &socket_handler;
 
     Task *task = new Task(read_func, tdata);
-    _thread_pool->add_task(task);
-    
-    return 0;
+    int ret = _thread_pool->add_task(task);
+    if (ret != 0) {
+        LOG_WARN("add read task fail:%d, we will close connect.", ret);
+        close_and_release(epollfd, event, socket_handler);
+    }
+    return ret;
 }
 
 void write_func(void *data) {
@@ -201,13 +204,15 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     tdata->watcher = &socket_handler;
 
     Task *task = new Task(write_func, tdata);
-    _thread_pool->add_task(task);
-    return 0;
+    int ret = _thread_pool->add_task(task);
+    if (ret != 0) {
+        LOG_WARN("add write task fail:%d, we will close connect.", ret);
+        close_and_release(epollfd, event, socket_handler);
+    }
+    return ret;
 }
 
-EpollSocket::EpollSocket() {
-    this->_schedule_handler = NULL;
-}
+EpollSocket::EpollSocket() {}
 
 void EpollSocket::set_thread_pool(ThreadPool *tp) {
     this->_thread_pool = tp;
@@ -245,16 +250,13 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
     epoll_event *events = new epoll_event[max_events];
     while (1) {
-        int fds_num = epoll_wait(epollfd, events, max_events, 1000);
+        int fds_num = epoll_wait(epollfd, events, max_events, -1);
         if (fds_num == -1) {
             if (errno == EINTR) { /*The call was interrupted by a signal handler*/
                 continue;
             }
             LOG_ERROR("epoll_pwait:%s", strerror(errno));
             return -1;
-        }
-        if (_schedule_handler != NULL) {
-            _schedule_handler();
         }
 
         for (int i = 0; i < fds_num; i++) {
@@ -286,7 +288,6 @@ int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher
     LOG_DEBUG("connect close");
 
     EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
-
     socket_handler.on_close(*hc);
 
     int fd = hc->fd;
@@ -299,10 +300,6 @@ int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher
     int ret = close(fd);
     LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
     return ret;
-}
-
-void EpollSocket::set_schedule(ScheduleHandlerPtr h) {
-    this->_schedule_handler = h;
 }
 
 void EpollSocket::add_bind_ip(std::string ip) {
