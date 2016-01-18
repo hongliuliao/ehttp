@@ -5,7 +5,7 @@ CXXFLAGS += -g -Wall
 LDFLAGS += -lpthread
 
 DEPS_INCLUDE_PATH=-I deps/simple_log/output/include/ -I deps/json-cpp/include/ -I deps/http-parser/
-DEPS_LIB_PATH=deps/simple_log/output/lib/libsimplelog.a deps/json-cpp/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
+DEPS_LIB_PATH=deps/simple_log/output/lib/libsimplelog.a deps/json-cpp/output/lib/libjson_libmt.a deps/http-parser/libhttp_parser.a
 SRC_INCLUDE_PATH=-I src
 OUTPUT_INCLUDE_PATH=-I output/include
 OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
@@ -25,6 +25,7 @@ tags:
 deps:
 	make -C deps/http-parser package
 	make -C deps/simple_log
+	make -C deps/json-cpp
 
 libsimpleserver.a: deps $(objects) 
 	ar -rcs libsimpleserver.a src/*.o

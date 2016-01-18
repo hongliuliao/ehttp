@@ -31,7 +31,7 @@
 /// If defined, indicates that the source file is amalgated
 /// to prevent private header inclusion.
 /// Remarks: it is automatically defined in the generated amalgated header.
-// #define JSON_IS_AMALGAMATION
+// #define JSON_IS_AMALGATED
 
 
 # ifdef JSON_IN_CPPTL
