@@ -65,10 +65,6 @@ void usleep(Request &request, Response &response) {
     response.set_body(root);
 }
 
-void test_schedule() {
-    LOG_INFO("START schedule ....");
-}
-
 int main(int argc, char **args) {
     int ret = log_init("./conf", "simple_log.conf");
     if (ret != 0) {

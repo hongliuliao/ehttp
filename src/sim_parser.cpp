@@ -14,15 +14,15 @@
 #define MAX_REQ_SIZE 10485760
 
 std::string RequestParam::get_param(std::string &name) {
-    std::multimap<std::string, std::string>::iterator i = this->params.find(name);
-    if (i == params.end()) {
+    std::multimap<std::string, std::string>::iterator i = this->_params.find(name);
+    if (i == _params.end()) {
         return std::string();
     }
     return i->second;
 }
 
 void RequestParam::get_params(std::string &name, std::vector<std::string> &params) {
-    std::pair<std::multimap<std::string, std::string>::iterator, std::multimap<std::string, std::string>::iterator> ret = this->params.equal_range(name);
+    std::pair<std::multimap<std::string, std::string>::iterator, std::multimap<std::string, std::string>::iterator> ret = this->_params.equal_range(name);
     for (std::multimap<std::string, std::string>::iterator it=ret.first; it!=ret.second; ++it) {
         params.push_back(it->second);
     }
@@ -42,7 +42,7 @@ int RequestParam::parse_query_url(std::string &query_url) {
             std::string key, value;
             std::getline(key_value_ss, key, '=');
             std::getline(key_value_ss, value, '=');
-            params.insert(std::pair<std::string, std::string>(key, value));
+            _params.insert(std::pair<std::string, std::string>(key, value));
         }
     }
     return 0;
@@ -50,15 +50,31 @@ int RequestParam::parse_query_url(std::string &query_url) {
 
 
 std::string RequestLine::get_request_uri() {
-    std::stringstream ss(this->request_url);
+    std::stringstream ss(this->get_request_url());
     std::string uri;
     std::getline(ss, uri, '?');
     return uri;
 }
 
+RequestParam &RequestLine::get_request_param() {
+    return _param;
+}
+
+std::string RequestLine::to_string() {
+    std::string ret = "method:";
+    ret += _method;
+    ret += ",";
+    ret += "request_url:";
+    ret += _request_url;
+    ret += ",";
+    ret += "http_version:";
+    ret += _http_version;
+    return ret;
+}
+
 int RequestLine::parse_request_url_params() {
-    std::stringstream ss(request_url);
-    LOG_DEBUG("start parse params which request_url:%s", request_url.c_str());
+    std::stringstream ss(_request_url);
+    LOG_DEBUG("start parse params which request_url:%s", _request_url.c_str());
 
     std::string uri;
     std::getline(ss, uri, '?');
@@ -66,9 +82,37 @@ int RequestLine::parse_request_url_params() {
         std::string query_url;
         std::getline(ss, query_url, '?');
 
-        param.parse_query_url(query_url);
+        _param.parse_query_url(query_url);
     }
     return 0;
+}
+
+std::string RequestLine::get_method() {
+    return _method;
+}
+
+void RequestLine::set_method(std::string m) {
+    _method = m;
+}
+
+std::string RequestLine::get_request_url() {
+    return _request_url;
+}
+
+void RequestLine::set_request_url(std::string url) {
+    _request_url = url;
+}
+
+void RequestLine::append_request_url(std::string p_url) {
+    _request_url += p_url;
+}
+
+std::string RequestLine::get_http_version() {
+    return _http_version;
+}
+
+void RequestLine::set_http_version(std::string v) {
+    _http_version = v;
 }
 
 std::string RequestBody::get_param(std::string name) {
@@ -88,10 +132,10 @@ RequestParam *RequestBody::get_req_params() {
 }
 
 std::string Request::get_param(std::string name) {
-    if (line.method == "GET") {
-        return line.get_request_param().get_param(name);
+    if (_line.get_method() == "GET") {
+        return _line.get_request_param().get_param(name);
     }
-    if (line.method == "POST") {
+    if (_line.get_method() == "POST") {
         return _body.get_param(name);
     }
     return "";
@@ -131,64 +175,63 @@ std::string Request::get_unescape_param(std::string name) {
 }
 
 void Request::get_params(std::string &name, std::vector<std::string> &params) {
-    if (line.method == "GET") {
-        line.get_request_param().get_params(name, params);
+    if (_line.get_method() == "GET") {
+        _line.get_request_param().get_params(name, params);
     }
-    if (line.method == "POST") {
+    if (_line.get_method() == "POST") {
         _body.get_params(name, params);
     }
 }
 
 void Request::add_header(std::string &name, std::string &value) {
-    this->headers[name] = value;
+    this->_headers[name] = value;
 }
 
 std::string Request::get_header(std::string name) {
-    return this->headers[name];
+    return this->_headers[name];
 }
 
 std::string Request::get_request_uri() {
-    return line.get_request_uri();
+    return _line.get_request_uri();
 }
 
 int ss_on_url(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
     std::string url;
     url.assign(buf, len);
-    req->line.request_url += url;
+    req->_line.append_request_url(url);
     return 0;
 }
 
 int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
-    int parse_part = req->parse_part;
-    if (parse_part == PARSE_REQ_LINE) {
+    if (req->_parse_part == PARSE_REQ_LINE) {
         if (p->method == 1) {
-            req->line.method = "GET";
+            req->_line.set_method("GET");
         }
         if (p->method == 3) {
-            req->line.method = "POST";
+            req->_line.set_method("POST");
         }
-        int ret = req->line.parse_request_url_params();
+        int ret = req->_line.parse_request_url_params();
         if (ret != 0) {
             return ret; 
         }
         if (p->http_major == 1 && p->http_minor == 0) {
-            req->line.http_version = "HTTP/1.0";
+            req->_line.set_http_version("HTTP/1.0");
         }
         if (p->http_major == 1 && p->http_minor == 1) {
-            req->line.http_version = "HTTP/1.1";
+            req->_line.set_http_version("HTTP/1.1");
         }
-        req->parse_part = PARSE_REQ_HEAD;
+        req->_parse_part = PARSE_REQ_HEAD;
     }
 
     std::string field;
     field.assign(buf, len);
-    if (req->last_was_value) {
-        req->header_fields.push_back(field);
-        req->last_was_value = false;
+    if (req->_last_was_value) {
+        req->_header_fields.push_back(field);
+        req->_last_was_value = false;
     } else {
-        req->header_fields[req->header_fields.size() - 1] += field;
+        req->_header_fields[req->_header_fields.size() - 1] += field;
     }
     LOG_DEBUG("GET field:%s", field.c_str());
     return 0;
@@ -199,29 +242,29 @@ int ss_on_header_value(http_parser *p, const char *buf, size_t len) {
 
     std::string value;
     value.assign(buf, len);
-    if (!req->last_was_value) {
-        req->header_values.push_back(value); 
+    if (!req->_last_was_value) {
+        req->_header_values.push_back(value); 
     } else {
-        req->header_values[req->header_values.size() - 1] += value; 
+        req->_header_values[req->_header_values.size() - 1] += value; 
     } 
     LOG_DEBUG("GET value:%s", value.c_str());
-    req->last_was_value = true;
+    req->_last_was_value = true;
     return 0;
 }
 
 int ss_on_headers_complete(http_parser *p) {
     Request *req = (Request *) p->data;
-    if (req->header_fields.size() != req->header_values.size()) {
+    if (req->_header_fields.size() != req->_header_values.size()) {
         LOG_ERROR("header field size:%u != value size:%u",
-                req->header_fields.size(), req->header_values.size());
+                req->_header_fields.size(), req->_header_values.size());
         return -1;
     }
-    for (size_t i = 0; i < req->header_fields.size(); i++) {
-        req->add_header(req->header_fields[i], req->header_values[i]);    
+    for (size_t i = 0; i < req->_header_fields.size(); i++) {
+        req->add_header(req->_header_fields[i], req->_header_values[i]);    
     }
-    req->parse_part = PARSE_REQ_HEAD_OVER;
+    req->_parse_part = PARSE_REQ_HEAD_OVER;
     LOG_DEBUG("HEADERS COMPLETE! which field size:%u, value size:%u",
-            req->header_fields.size(), req->header_values.size());
+            req->_header_fields.size(), req->_header_values.size());
     if (req->get_method() == "POST" && req->get_header("Content-Length").empty()) {
         req->_parse_err = PARSE_LEN_REQUIRED;
         return -1;
@@ -232,7 +275,7 @@ int ss_on_headers_complete(http_parser *p) {
 int ss_on_body(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
     req->get_body()->get_raw_string()->append(buf, len);
-    req->parse_part = PARSE_REQ_BODY;
+    req->_parse_part = PARSE_REQ_BODY;
     LOG_DEBUG("GET body len:%d", len);
     return 0;
 }
@@ -246,15 +289,15 @@ int ss_on_message_complete(http_parser *p) {
             req->get_body()->get_req_params()->parse_query_url(*raw_str);
         }
     }
-    req->parse_part = PARSE_REQ_OVER;
+    req->_parse_part = PARSE_REQ_OVER;
     LOG_DEBUG("msg COMPLETE!");
     return 0;
 }
 
 Request::Request() {
-    parse_part = PARSE_REQ_LINE;
-    total_req_size = 0;
-    last_was_value = true; // add new field for first
+    _parse_part = PARSE_REQ_LINE;
+    _total_req_size = 0;
+    _last_was_value = true; // add new field for first
     _parse_err = 0;
 
     http_parser_settings_init(&_settings);
@@ -272,8 +315,8 @@ Request::Request() {
 Request::~Request() {}
 
 int Request::parse_request(const char *read_buffer, int read_size) {
-    total_req_size += read_size;
-    if (total_req_size > MAX_REQ_SIZE) {
+    _total_req_size += read_size;
+    if (_total_req_size > MAX_REQ_SIZE) {
         LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
         return -1;
     }
@@ -291,7 +334,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
     if (_parse_err) {
         return _parse_err;
     }
-    if (parse_part != PARSE_REQ_OVER) {
+    if (_parse_part != PARSE_REQ_OVER) {
         return NEED_MORE_STATUS;
     }
     return 0;
@@ -302,66 +345,121 @@ RequestBody *Request::get_body() {
 }
 
 std::string Request::get_method() {
-    return line.method;
+    return _line.get_method();
 }
 
 Response::Response(CodeMsg status_code) {
-    this->code_msg = status_code;
-    this->is_writed = 0;
+    this->_code_msg = status_code;
+    this->_is_writed = 0;
 }
 
 void Response::set_head(std::string name, std::string &value) {
-    this->headers[name] = value;
+    this->_headers[name] = value;
 }
 
 void Response::set_body(Json::Value &body) {
     Json::FastWriter writer;
     std::string str_value = writer.write(body);
-    this->body = str_value;
+    this->_body = str_value;
 }
 
 int Response::gen_response(std::string &http_version, bool is_keepalive) {
-    LOG_DEBUG("START gen_response code:%d, msg:%s", code_msg.status_code, code_msg.msg.c_str());
-    res_bytes << http_version << " " << code_msg.status_code << " " << code_msg.msg << "\r\n";
-    res_bytes << "Server: SimpleServer/0.1" << "\r\n";
-    if(headers.find("Content-Type") == headers.end()) {
-        res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
+    LOG_DEBUG("START gen_response code:%d, msg:%s", _code_msg.status_code, _code_msg.msg.c_str());
+    _res_bytes << http_version << " " << _code_msg.status_code << " " << _code_msg.msg << "\r\n";
+    _res_bytes << "Server: SimpleServer/0.1" << "\r\n";
+    if (_headers.find("Content-Type") == _headers.end()) {
+        _res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
     }
-    res_bytes << "Content-Length: " << body.size() << "\r\n";
+    _res_bytes << "Content-Length: " << _body.size() << "\r\n";
 
     std::string con_status = "Connection: close";
     if(is_keepalive) {
         con_status = "Connection: Keep-Alive";
     }
-    res_bytes << con_status << "\r\n";
+    _res_bytes << con_status << "\r\n";
 
-    for (std::map<std::string, std::string>::iterator it=headers.begin(); it!=headers.end(); ++it) {
-        res_bytes << it->first << ": " << it->second << "\r\n";
+    for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); ++it) {
+        _res_bytes << it->first << ": " << it->second << "\r\n";
     }
     // header end
-    res_bytes << "\r\n";
-    res_bytes << body;
+    _res_bytes << "\r\n";
+    _res_bytes << _body;
 
-    LOG_DEBUG("gen response context:%s", res_bytes.str().c_str());
+    LOG_DEBUG("gen response context:%s", _res_bytes.str().c_str());
     return 0;
 }
 
 int Response::readsome(char *buffer, int buffer_size, int &read_size) {
-    res_bytes.read(buffer, buffer_size);
-    read_size = res_bytes.gcount();
+    _res_bytes.read(buffer, buffer_size);
+    read_size = _res_bytes.gcount();
 
-    if (!res_bytes.eof()) {
+    if (!_res_bytes.eof()) {
         return 1;
     }
     return 0;
 }
 
 int Response::rollback(int num) {
-    if (res_bytes.eof()) {
-        res_bytes.clear();
+    if (_res_bytes.eof()) {
+        _res_bytes.clear();
     }
-    int rb_pos = (int) res_bytes.tellg() - num;
-    res_bytes.seekg(rb_pos);
-    return res_bytes.good() ? 0 : -1;
+    int rb_pos = (int) _res_bytes.tellg() - num;
+    _res_bytes.seekg(rb_pos);
+    return _res_bytes.good() ? 0 : -1;
 }
 
+HttpContext::HttpContext(int fd) {
+    this->_fd = fd;
+    _req = new Request();
+    _res = new Response();
+}
+
+HttpContext::~HttpContext() {
+    delete_req_res();
+}
+
+int HttpContext::record_start_time() {
+    gettimeofday(&_start, NULL);
+    return 0;
+}
+
+int HttpContext::get_cost_time() {
+    timeval end;
+    gettimeofday(&end, NULL);
+    int cost_time = (end.tv_sec - _start.tv_sec) * 1000000 + (end.tv_usec - _start.tv_usec);
+    return cost_time;
+}
+
+void HttpContext::print_access_log(std::string &client_ip) {
+    std::string http_method = this->_req->_line.get_method();
+    std::string request_url = this->_req->_line.get_request_url();
+    int cost_time = get_cost_time();
+    LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
+            http_method.c_str(), request_url.c_str(), _res->_code_msg.status_code,
+            cost_time, _res->_body.size(), client_ip.c_str());
+}
+
+inline void HttpContext::delete_req_res() {
+    if (_req != NULL) {
+        delete _req;
+        _req = NULL;
+    }
+    if (_res != NULL) {
+        delete _res;
+        _res = NULL;
+    }
+}
+
+void HttpContext::clear() {
+    delete_req_res();
+    _req = new Request();
+    _res = new Response();
+}
+
+Response &HttpContext::get_res() {
+    return *_res;
+}
+
+Request &HttpContext::get_requset() {
+    return *_req;
+}

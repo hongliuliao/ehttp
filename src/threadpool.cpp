@@ -97,7 +97,7 @@ int ThreadPool::destroy_threadpool()
     for (int i = 0; i < m_pool_size; i++) {
         void* result;
         ret = pthread_join(m_threads[i], &result);
-        LOG_DEBUG("pthread_join() returned %d:%s", ret, strerror(errno));
+        LOG_DEBUG("pthread_join() returned %d", ret);
         m_task_cond_var.broadcast(); // try waking up a bunch of threads that are still waiting
     }
     LOG_INFO("%d threads exited from the thread pool", m_pool_size);

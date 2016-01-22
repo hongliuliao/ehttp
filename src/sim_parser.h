@@ -38,8 +38,6 @@ const static int NEED_MORE_STATUS = 1;
 const static int PARSE_LEN_REQUIRED = 2;
 
 class RequestParam {
-    private:
-        std::multimap<std::string, std::string> params;
     public:
 
         std::string get_param(std::string &name);
@@ -50,45 +48,37 @@ class RequestParam {
          * query_url : name=tom&age=3
          */
         int parse_query_url(std::string &query_url);
+    private:
+        std::multimap<std::string, std::string> _params;
 };
 
 class RequestLine {
-
     public:
-        std::string method;       // like GET/POST
-        std::string request_url;  // like /hello?name=aaa
-        std::string http_version; // like HTTP/1.1
-
         std::string get_request_uri();
 
-        RequestParam &get_request_param() {
-            return param;
-        }
+        RequestParam &get_request_param();
 
-        std::string to_string() {
-            std::string ret = "method:";
-            ret += method;
-            ret += ",";
-            ret += "request_url:";
-            ret += request_url;
-            ret += ",";
-            ret += "http_version:";
-            ret += http_version;
-            return ret;
-        }
+        std::string to_string();
         /**
          * request_url : /sayhello?name=tom&age=3
          */
         int parse_request_url_params();
+        std::string get_method();
+        void set_method(std::string m);
+        std::string get_request_url();
+        void set_request_url(std::string url);
+        void append_request_url(std::string p_url);
+        std::string get_http_version();
+        void set_http_version(std::string v);
     private:
-        RequestParam param;
+        RequestParam _param;
+        std::string _method;       // like GET/POST
+        std::string _request_url;  // like /hello?name=aaa
+        std::string _http_version; // like HTTP/1.1
 };
 
 
 class RequestBody {
-    private:
-        std::string _raw_string;
-        RequestParam _req_params;
     public:
         std::string get_param(std::string name);
 
@@ -97,15 +87,12 @@ class RequestBody {
         std::string *get_raw_string();
 
         RequestParam *get_req_params();
+    private:
+        std::string _raw_string;
+        RequestParam _req_params;
 };
 
 class Request {
-    private:
-        std::map<std::string, std::string> headers;
-        int total_req_size;
-        RequestBody _body;
-        http_parser_settings _settings;
-        http_parser _parser;
     public:
         Request();
 
@@ -131,30 +118,23 @@ class Request {
 
         std::string get_method();
 
-        bool last_was_value;
-
-        std::vector<std::string> header_fields;
-
-        std::vector<std::string> header_values;
-
-        int parse_part;
-
+        bool _last_was_value;
+        std::vector<std::string> _header_fields;
+        std::vector<std::string> _header_values;
+        int _parse_part;
         int _parse_err;
-
-        RequestLine line;
+        RequestLine _line;
+    private:
+        std::map<std::string, std::string> _headers;
+        int _total_req_size;
+        RequestBody _body;
+        http_parser_settings _settings;
+        http_parser _parser;
 
 };
 
 class Response {
-    private:
-        std::map<std::string, std::string> headers;
-        std::stringstream res_bytes;
-
     public:
-        bool is_writed;
-        CodeMsg code_msg;
-        std::string body;
-
         Response(CodeMsg status_code = STATUS_OK);
         Response(CodeMsg status_code, Json::Value &body);
 
@@ -173,73 +153,40 @@ class Response {
          * rollback num bytes in response bytes
          */
         int rollback(int num);
-
+        
+        bool _is_writed;
+        CodeMsg _code_msg;
+        std::string _body;
+    private:
+        std::map<std::string, std::string> _headers;
+        std::stringstream _res_bytes;
 };
 
 class HttpContext {
-    private:
-        Response *res;
-        Request *req;
     public:
-        int fd;
-        timeval start;
+        HttpContext(int fd);
 
-        HttpContext(int fd) {
-            this->fd = fd;
-            req = new Request();
-            res = new Response();
-        }
+        ~HttpContext();
 
-        ~HttpContext() {
-            delete_req_res();
-        }
+        int record_start_time();
 
-        int record_start_time() {
-            gettimeofday(&start, NULL);
-            return 0;
-        }
+        int get_cost_time();
 
-        int get_cost_time() {
-            timeval end;
-            gettimeofday(&end, NULL);
-            int cost_time = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
-            return cost_time;
-        }
+        void print_access_log(std::string &client_ip);
 
-        void print_access_log(std::string &client_ip) {
-            std::string http_method = this->req->line.method;
-            std::string request_url = this->req->line.request_url;
-            int cost_time = get_cost_time();
-            LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
-                    http_method.c_str(), request_url.c_str(), res->code_msg.status_code,
-                    cost_time, res->body.size(), client_ip.c_str());
-        }
+        inline void delete_req_res();
 
-        inline void delete_req_res() {
-            if (req != NULL) {
-                delete req;
-                req = NULL;
-            }
-            if (res != NULL) {
-                delete res;
-                res = NULL;
-            }
-        }
+        void clear();
 
-        void clear() {
-            delete_req_res();
-            req = new Request();
-            res = new Response();
-        }
+        Response &get_res();
 
-        Response &get_res() {
-            return *res;
-        }
-
-        Request &get_requset() {
-            return *req;
-        }
-
+        Request &get_requset();
+        
+        int _fd;
+        timeval _start;
+    private:
+        Response *_res;
+        Request *_req;
 };
 
 #endif /* SIM_PARSER_H_ */

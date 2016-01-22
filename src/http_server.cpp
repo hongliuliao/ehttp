@@ -54,9 +54,9 @@ void HttpEpollWatcher::add_mapping(std::string path, json_handler_ptr handler, H
 
 int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     std::string uri = req.get_request_uri();
-    if(this->resource_map.find(uri) == this->resource_map.end()) { // not found
-        res.code_msg = STATUS_NOT_FOUND;
-        res.body = STATUS_NOT_FOUND.msg;
+    if (this->resource_map.find(uri) == this->resource_map.end()) { // not found
+        res._code_msg = STATUS_NOT_FOUND;
+        res._body = STATUS_NOT_FOUND.msg;
         LOG_INFO("page not found which uri:%s", uri.c_str());
         return 0;
     }
@@ -64,11 +64,12 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     Resource resource = this->resource_map[req.get_request_uri()];
     // check method
     HttpMethod method = resource.method;
-    if (method.name != req.line.method) {
-        res.code_msg = STATUS_METHOD_NOT_ALLOWED;
+    if (method.name != req._line.get_method()) {
+        res._code_msg = STATUS_METHOD_NOT_ALLOWED;
         res.set_head("Allow", method.name);
-        res.body.clear();
-        LOG_INFO("not allow method, allowed:%s, request method:%s", method.name.c_str(), req.line.method.c_str());
+        res._body.clear();
+        LOG_INFO("not allow method, allowed:%s, request method:%s", 
+            method.name.c_str(), req._line.get_method().c_str());
         return 0;
     }
 
@@ -79,7 +80,8 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     } else if (resource.handler_ptr != NULL) {
         resource.handler_ptr(req, res);
     }
-    LOG_DEBUG("handle response success which code:%d, msg:%s", res.code_msg.status_code, res.code_msg.msg.c_str());
+    LOG_DEBUG("handle response success which code:%d, msg:%s", 
+        res._code_msg.status_code, res._code_msg.msg.c_str());
     return 0;
 }
 
@@ -106,7 +108,7 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
     }
     LOG_DEBUG("read success which read size:%d", read_size);
     HttpContext *http_context = (HttpContext *) epoll_context->ptr;
-    if (http_context->get_requset().parse_part == PARSE_REQ_LINE) {
+    if (http_context->get_requset()._parse_part == PARSE_REQ_LINE) {
         http_context->record_start_time();
     }
 
@@ -118,8 +120,8 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
         return READ_CONTINUE;
     }
     if (ret == PARSE_LEN_REQUIRED) {
-        http_context->get_res().code_msg = STATUS_LENGTH_REQUIRED;
-        http_context->get_res().body = STATUS_LENGTH_REQUIRED.msg;
+        http_context->get_res()._code_msg = STATUS_LENGTH_REQUIRED;
+        http_context->get_res()._body = STATUS_LENGTH_REQUIRED.msg;
         return READ_OVER;
     } 
 
@@ -134,9 +136,10 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
     Response &res = hc->get_res();
     bool is_keepalive = (strcasecmp(hc->get_requset().get_header("Connection").c_str(), "keep-alive") == 0);
 
-    if (!res.is_writed) {
-        res.gen_response(hc->get_requset().line.http_version, is_keepalive);
-        res.is_writed = true;
+    if (!res._is_writed) {
+        std::string http_version = hc->get_requset()._line.get_http_version();
+        res.gen_response(http_version, is_keepalive);
+        res._is_writed = true;
     }
 
     char buffer[SS_WRITE_BUFFER_SIZE];
