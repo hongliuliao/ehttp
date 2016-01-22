@@ -73,7 +73,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
         return 0;
     }
 
-    if(resource.json_ptr != NULL) {
+    if (resource.json_ptr != NULL) {
         Json::Value root;
         resource.json_ptr(req, root);
         res.set_body(root);
@@ -169,7 +169,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
         hc->print_access_log(epoll_context.client_ip);
     }
 
-    if(is_keepalive && nwrite > 0) {
+    if (is_keepalive && nwrite > 0) {
         hc->clear();
         return WRITE_CONN_ALIVE;
     }
@@ -177,11 +177,11 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 }
 
 int HttpEpollWatcher::on_close(EpollContext &epoll_context) {
-    if(epoll_context.ptr == NULL) {
+    if (epoll_context.ptr == NULL) {
         return 0;
     }
     HttpContext *hc = (HttpContext *) epoll_context.ptr;
-    if(hc != NULL) {
+    if (hc != NULL) {
         delete hc;
         hc = NULL;
     }
