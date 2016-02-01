@@ -63,12 +63,19 @@ class RequestLine {
          * request_url : /sayhello?name=tom&age=3
          */
         int parse_request_url_params();
+        
         std::string get_method();
+        
         void set_method(std::string m);
+        
         std::string get_request_url();
+        
         void set_request_url(std::string url);
+        
         void append_request_url(std::string p_url);
+        
         std::string get_http_version();
+        
         void set_http_version(std::string v);
     private:
         RequestParam _param;

@@ -10,15 +10,13 @@
 #include "http_server.h"
 #include "threadpool.h"
 
-int g_a = 0;
 pthread_key_t g_tp_key;
 
 void a_test_fn() {
     pthread_t t = pthread_self();
     LOG_INFO("start thread data function , tid:%u", t);
-    g_a++;
-    int *a = new int();
-    *a = g_a;
+    unsigned long *a = new unsigned long();
+    *a = t;
 
     pthread_setspecific(g_tp_key, a);
 }
@@ -77,6 +75,7 @@ int main(int argc, char **args) {
     }
 
     pthread_key_create(&g_tp_key,NULL); 
+    
     ThreadPool tp;
     tp.set_thread_start_cb(a_test_fn);
     tp.set_pool_size(4);

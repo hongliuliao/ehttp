@@ -145,7 +145,6 @@ void read_func(void *data) {
         LOG_ERROR("unkonw ret!");
     }
     delete tdata;
-    return;
 }
 
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
@@ -231,6 +230,8 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         return ret;
     }
 
+    // The "size" parameter is a hint specifying the number of file
+    // descriptors to be associated with the new instance. 
     int epollfd = epoll_create(1024);
     if (epollfd == -1) {
         LOG_ERROR("epoll_create:%s", strerror(errno));
@@ -256,7 +257,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
                 continue;
             }
             LOG_ERROR("epoll_pwait:%s", strerror(errno));
-            return -1;
+            break;
         }
 
         for (int i = 0; i < fds_num; i++) {
@@ -278,11 +279,11 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         delete[] events;
         events = NULL;
     }
-
+    return -1;
 }
 
 int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
-    if(epoll_event.data.ptr == NULL) {
+    if (epoll_event.data.ptr == NULL) {
         return 0;
     }
     LOG_DEBUG("connect close");
