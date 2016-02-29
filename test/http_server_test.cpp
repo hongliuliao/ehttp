@@ -93,12 +93,12 @@ int main(int argc, char **args) {
     http_server.add_mapping("/sayhello", sayhello);
     http_server.add_mapping("/login", login, POST_METHOD);
 
-    int port = atoi(args[1]);
-    int backlog = 100000;
-    int max_events = 1000;
-
     http_server.add_bind_ip("127.0.0.1");
+    http_server.set_port(atoi(args[1]));
+    http_server.set_backlog(100000);
+    http_server.set_max_events(100000);
     //http_server.add_bind_ip("192.168.238.158");
-    http_server.start(port, backlog, max_events);
+    http_server.start_async();
+    http_server.join();
     return 0;
 }

@@ -22,8 +22,43 @@
 #include "sim_parser.h"
 #include "http_server.h"
 
+HttpServer::HttpServer() {
+    _port = 3456; // default port 
+    _backlog = 10;
+    _max_events = 1000;
+    _id = 0;
+}
+
 int HttpServer::start(int port, int backlog, int max_events) {
+    LOG_WARN("start() method is deprecated, please use start_sync() or start_async() instead!");
     return epoll_socket.start_epoll(port, http_handler, backlog, max_events);
+}
+
+void *http_start_routine(void *ptr) {
+    HttpServer *hs = (HttpServer *) ptr;
+    hs->start_sync();
+    return NULL;
+}
+
+int HttpServer::start_async() {
+    int ret = pthread_create(&_id, NULL, http_start_routine, this);
+    if (ret != 0) {
+        LOG_ERROR("HttpServer::start_async err:%d", ret);
+        return ret;
+    }
+    return 0;
+}
+
+int HttpServer::join() {
+    if (_id == 0) {
+        LOG_ERROR("HttpServer not start async!");
+        return -1;
+    }
+    return pthread_join(_id, NULL);
+}
+
+int HttpServer::start_sync() {
+    return epoll_socket.start_epoll(_port, http_handler, _backlog, _max_events);
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
@@ -40,6 +75,18 @@ void HttpServer::add_bind_ip(std::string ip) {
 
 void HttpServer::set_thread_pool(ThreadPool *tp) {
     epoll_socket.set_thread_pool(tp);
+}
+
+void HttpServer::set_backlog(int backlog) {
+    _backlog = backlog;
+}
+
+void HttpServer::set_max_events(int me) {
+    _max_events = me;
+}
+
+void HttpServer::set_port(int port) {
+    _port = port;
 }
 
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {

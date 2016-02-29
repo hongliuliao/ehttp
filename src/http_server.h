@@ -55,10 +55,9 @@ class HttpEpollWatcher : public EpollSocketWatcher {
 
 
 class HttpServer {
-    private:
-        HttpEpollWatcher http_handler;
-        EpollSocket epoll_socket;
     public:
+        HttpServer();
+
         void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
         void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
@@ -66,9 +65,27 @@ class HttpServer {
         void add_bind_ip(std::string ip);
 
         int start(int port, int backlog = 10, int max_events = 1000);
+        
+        int start_async();
+
+        int join();
+        
+        int start_sync();
 
         void set_thread_pool(ThreadPool *tp);
 
+        void set_backlog(int backlog);
+        
+        void set_max_events(int me);
+        
+        void set_port(int port);
+    private:
+        HttpEpollWatcher http_handler;
+        EpollSocket epoll_socket;
+        int _backlog;
+        int _max_events;
+        int _port;
+        pthread_t _id; // when start async
 };
 
 #endif /* HTTP_SERVER_H_ */
