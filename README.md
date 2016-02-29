@@ -8,7 +8,6 @@ ehttp
 * 多线程模型
 
 ## 依赖
- * [simple_log](https://github.com/hongliuliao/simple_log) 日志组件
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) v0.6.0 json序列化组件
  * [http-parser](https://github.com/nodejs/http-parser) For parse http requset 
 
