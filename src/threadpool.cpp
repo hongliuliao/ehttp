@@ -21,6 +21,7 @@ ThreadPool::ThreadPool() {
     m_scb = NULL;
     m_task_size_limit = -1;
     m_pool_size = 0;
+    m_pool_state = -1;
 }
 
 ThreadPool::~ThreadPool()
@@ -52,6 +53,9 @@ int ThreadPool::start()
     if (m_pool_size == 0) {
         LOG_ERROR("pool size must be set!");
         return -1;
+    }
+    if (m_pool_state == STARTED) {
+        return 0;
     }
     m_pool_state = STARTED;
     int ret = -1;

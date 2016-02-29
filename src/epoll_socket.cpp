@@ -225,7 +225,12 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         LOG_ERROR("Please set thread pool first .");
         return -1;
     }
-    int ret = this->listen_on();
+    int ret = _thread_pool->start();
+    if (ret != 0) {
+        LOG_ERROR("thread pool start error:%d", ret);
+        return ret;
+    }
+    ret = this->listen_on();
     if (ret != 0) {
         return ret;
     }

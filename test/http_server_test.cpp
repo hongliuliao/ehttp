@@ -29,7 +29,7 @@ void hello(Request &request, Json::Value &root) {
         LOG_INFO("not thread data, tid:%u", t);
         return;
     }
-    LOG_INFO("get thread data:%d", *tmp);
+    LOG_INFO("get thread data:%lu", *tmp);
 }
 
 void sayhello(Request &request, Json::Value &root) {
@@ -79,11 +79,6 @@ int main(int argc, char **args) {
     ThreadPool tp;
     tp.set_thread_start_cb(a_test_fn);
     tp.set_pool_size(4);
-    ret = tp.start();
-    if (ret != 0) {
-        LOG_ERROR("thread pool start error:%d", ret);
-        return ret;
-    }
 
     HttpServer http_server;
     http_server.set_thread_pool(&tp);
