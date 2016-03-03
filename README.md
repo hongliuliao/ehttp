@@ -46,7 +46,6 @@ void login(Request &request, Json::Value &root) {
 int main() {
     HttpServer http_server;
     
-    http_server.set_thread_pool(&tp);
     http_server.add_mapping("/login", login, POST_METHOD);
 
     http_server.set_port(3456);
