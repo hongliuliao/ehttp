@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <sys/epoll.h>
 #include <sys/fcntl.h>
+#include <sys/sysinfo.h>
 
 #include "simple_log.h"
 #include "epoll_socket.h"
@@ -211,7 +212,9 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     return ret;
 }
 
-EpollSocket::EpollSocket() {}
+EpollSocket::EpollSocket() {
+    _thread_pool = NULL;
+}
 
 void EpollSocket::set_thread_pool(ThreadPool *tp) {
     this->_thread_pool = tp;
@@ -222,8 +225,10 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     _port = port;
 
     if (_thread_pool == NULL) {
-        LOG_ERROR("Please set thread pool first .");
-        return -1;
+        int core_size = get_nprocs();
+        LOG_INFO("thread pool not set, we will build for core size:%d", core_size);
+        _thread_pool = new ThreadPool();
+        _thread_pool->set_pool_size(core_size);
     }
     int ret = _thread_pool->start();
     if (ret != 0) {

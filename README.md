@@ -44,9 +44,6 @@ void login(Request &request, Json::Value &root) {
 }
 
 int main() {
-    ThreadPool tp;
-    tp.set_pool_size(4);
-	
     HttpServer http_server;
     
     http_server.set_thread_pool(&tp);
