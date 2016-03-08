@@ -85,7 +85,7 @@ class HttpServer {
         int _backlog;
         int _max_events;
         int _port;
-        pthread_t _id; // when start async
+        pthread_t _pid; // when start async
 };
 
 #endif /* HTTP_SERVER_H_ */

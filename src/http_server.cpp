@@ -26,7 +26,7 @@ HttpServer::HttpServer() {
     _port = 3456; // default port 
     _backlog = 10;
     _max_events = 1000;
-    _id = 0;
+    _pid = 0;
 }
 
 int HttpServer::start(int port, int backlog, int max_events) {
@@ -41,7 +41,7 @@ void *http_start_routine(void *ptr) {
 }
 
 int HttpServer::start_async() {
-    int ret = pthread_create(&_id, NULL, http_start_routine, this);
+    int ret = pthread_create(&_pid, NULL, http_start_routine, this);
     if (ret != 0) {
         LOG_ERROR("HttpServer::start_async err:%d", ret);
         return ret;
@@ -50,11 +50,11 @@ int HttpServer::start_async() {
 }
 
 int HttpServer::join() {
-    if (_id == 0) {
+    if (_pid == 0) {
         LOG_ERROR("HttpServer not start async!");
         return -1;
     }
-    return pthread_join(_id, NULL);
+    return pthread_join(_pid, NULL);
 }
 
 int HttpServer::start_sync() {

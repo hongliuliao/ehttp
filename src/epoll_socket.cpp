@@ -19,6 +19,18 @@
 #include "simple_log.h"
 #include "epoll_socket.h"
 
+EpollSocket::EpollSocket() {
+    _thread_pool = NULL;
+    _use_default_tp = true;
+}
+
+EpollSocket::~EpollSocket() {
+    if (_thread_pool != NULL && _use_default_tp) {
+        delete _thread_pool;
+        _thread_pool = NULL;
+    }
+}
+
 int EpollSocket::setNonblocking(int fd) {
     int flags;
 
@@ -212,12 +224,9 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     return ret;
 }
 
-EpollSocket::EpollSocket() {
-    _thread_pool = NULL;
-}
-
 void EpollSocket::set_thread_pool(ThreadPool *tp) {
     this->_thread_pool = tp;
+    _use_default_tp = false;
 }
 
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {

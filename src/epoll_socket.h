@@ -76,13 +76,15 @@ class EpollSocket {
         int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
         std::vector<std::string> _bind_ips;
-
         int _backlog;
         int _port;
         std::set<int> _listen_sockets;
         ThreadPool *_thread_pool;
+        bool _use_default_tp;
     public:
         EpollSocket();
+       
+         ~EpollSocket();
 
         int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
 
