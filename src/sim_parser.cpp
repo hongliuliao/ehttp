@@ -12,6 +12,7 @@
 #include "http_parser.h"
 
 #define MAX_REQ_SIZE 10485760
+#define EHTTP_VERSION "1.0.2"
 
 std::string RequestParam::get_param(std::string &name) {
     std::multimap<std::string, std::string>::iterator i = this->_params.find(name);
@@ -366,7 +367,7 @@ void Response::set_body(Json::Value &body) {
 int Response::gen_response(std::string &http_version, bool is_keepalive) {
     LOG_DEBUG("START gen_response code:%d, msg:%s", _code_msg.status_code, _code_msg.msg.c_str());
     _res_bytes << http_version << " " << _code_msg.status_code << " " << _code_msg.msg << "\r\n";
-    _res_bytes << "Server: SimpleServer/0.1" << "\r\n";
+    _res_bytes << "Server: ehttp/" << EHTTP_VERSION << "\r\n";
     if (_headers.find("Content-Type") == _headers.end()) {
         _res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
     }
