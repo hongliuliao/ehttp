@@ -15,6 +15,7 @@
 #include <sys/epoll.h>
 #include <sys/fcntl.h>
 #include <sys/sysinfo.h>
+#include <unistd.h>
 
 #include "simple_log.h"
 #include "epoll_socket.h"
@@ -41,7 +42,7 @@ int EpollSocket::setNonblocking(int fd) {
 
 int EpollSocket::bind_on(unsigned int ip) {
     /* listen on sock_fd, new connection on new_fd */
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
         LOG_ERROR("socket error:%s", strerror(errno));
         return -1;
@@ -53,7 +54,7 @@ int EpollSocket::bind_on(unsigned int ip) {
     memset (&my_addr, 0, sizeof(my_addr));
     my_addr.sin_family = AF_INET; /* host byte order */
     my_addr.sin_port = htons(_port); /* short, network byte order */
-    my_addr.sin_addr.s_addr = ip;    
+    my_addr.sin_addr.s_addr = ip;
 
     if (bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) == -1) {
         LOG_ERROR("bind error:%s", strerror(errno));
@@ -76,7 +77,7 @@ int EpollSocket::listen_on() {
         LOG_INFO("bind for all ip (0.0.0.0)!");
     } else {
         for (size_t i = 0; i < _bind_ips.size(); i++) {
-            unsigned ip = inet_addr(_bind_ips[i].c_str()); 
+            unsigned ip = inet_addr(_bind_ips[i].c_str());
             int ret = bind_on(ip);
             if (ret != 0) {
                 return ret;
@@ -250,7 +251,7 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     }
 
     // The "size" parameter is a hint specifying the number of file
-    // descriptors to be associated with the new instance. 
+    // descriptors to be associated with the new instance.
     int epollfd = epoll_create(1024);
     if (epollfd == -1) {
         LOG_ERROR("epoll_create:%s", strerror(errno));
