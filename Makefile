@@ -1,4 +1,4 @@
-.PHONY: all test clean deps tags
+.PHONY: all test clean deps tags 
 
 CXX=g++
 CXXFLAGS += -g -Wall
@@ -12,11 +12,12 @@ OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
 
 objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-
-all: deps libsimpleserver.a
-	mkdir -p output/include output/lib output/bin
+all: prepare deps libsimpleserver.a
 	cp src/*.h output/include/
 	mv libsimpleserver.a output/lib/
+
+prepare: 
+	mkdir -p output/include output/lib output/bin
 
 tags:
 	ctags -R /usr/include src deps
