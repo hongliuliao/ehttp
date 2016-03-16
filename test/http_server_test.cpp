@@ -6,6 +6,7 @@
  */
 #include <sstream>
 #include <cstdlib>
+#include <unistd.h>
 #include "simple_log.h"
 #include "http_server.h"
 #include "threadpool.h"
@@ -24,7 +25,7 @@ void a_test_fn() {
 void hello(Request &request, Json::Value &root) {
 	root["hello"] = "world";
     pthread_t t = pthread_self();
-    int *tmp = (int*)pthread_getspecific(g_tp_key); 
+    int *tmp = (int*)pthread_getspecific(g_tp_key);
     if (tmp == NULL) {
         LOG_INFO("not thread data, tid:%u", t);
         return;
@@ -74,7 +75,7 @@ int main(int argc, char **args) {
         return -1;
     }
 
-    //pthread_key_create(&g_tp_key,NULL); 
+    //pthread_key_create(&g_tp_key,NULL);
     //
     //ThreadPool tp;
     //tp.set_thread_start_cb(a_test_fn);
