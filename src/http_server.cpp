@@ -22,6 +22,27 @@
 #include "sim_parser.h"
 #include "http_server.h"
 
+HttpMethod::HttpMethod(int code, std::string name) {
+    _codes.insert(code);
+    _names.insert(name);
+}
+
+HttpMethod& HttpMethod::operator|(HttpMethod hm) {
+    std::set<int> *codes = hm.get_codes();
+    _codes.insert(codes->begin(), codes->end());
+    std::set<std::string> *names = hm.get_names();
+    _names.insert(names->begin(), names->end());
+    return *this;
+}
+
+std::set<int> *HttpMethod::get_codes() {
+    return &_codes;
+}
+
+std::set<std::string> *HttpMethod::get_names() {
+    return &_names;
+}
+
 HttpServer::HttpServer() {
     _port = 3456; // default port 
     _backlog = 10;
@@ -111,12 +132,13 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     Resource resource = this->resource_map[req.get_request_uri()];
     // check method
     HttpMethod method = resource.method;
-    if (method.name != req._line.get_method()) {
+    if (method.get_names()->count(req._line.get_method()) == 0) {
         res._code_msg = STATUS_METHOD_NOT_ALLOWED;
-        res.set_head("Allow", method.name);
+        std::string allow_name = *(method.get_names()->begin()); 
+        res.set_head("Allow", allow_name);
         res._body.clear();
         LOG_INFO("not allow method, allowed:%s, request method:%s", 
-            method.name.c_str(), req._line.get_method().c_str());
+            allow_name.c_str(), req._line.get_method().c_str());
         return 0;
     }
 

@@ -87,7 +87,7 @@ int main(int argc, char **args) {
     http_server.add_mapping("/hello", hello);
     http_server.add_mapping("/usleep", usleep);
     http_server.add_mapping("/sayhello", sayhello);
-    http_server.add_mapping("/login", login, POST_METHOD);
+    http_server.add_mapping("/login", login, GET_METHOD | POST_METHOD);
 
     http_server.add_bind_ip("127.0.0.1");
     http_server.set_port(atoi(args[1]));

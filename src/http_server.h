@@ -10,18 +10,26 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include "sys/epoll.h"
 #include "json/json.h"
 #include "epoll_socket.h"
 #include "sim_parser.h"
 
-struct HttpMethod {
-    int code;
-    std::string name;
+class HttpMethod {
+public:
+    HttpMethod() {};
+    HttpMethod(int code, std::string name);
+    HttpMethod& operator|(HttpMethod hm);
+    std::set<int> *get_codes();
+    std::set<std::string> *get_names();
+private:
+    std::set<int> _codes;
+    std::set<std::string> _names;
 };
 
-const static HttpMethod GET_METHOD = {1, "GET"};
-const static HttpMethod POST_METHOD = {2, "POST"};
+static HttpMethod GET_METHOD = HttpMethod(1, "GET");
+static HttpMethod POST_METHOD = HttpMethod(2, "POST");
 
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
