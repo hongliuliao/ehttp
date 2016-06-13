@@ -155,10 +155,10 @@ int unescape(std::string &param, std::string &unescape_param) {
             temp += param[i+1];
             temp += param[i+2];
             char *ptr;
-            unescape_param[write_index] = (unsigned char) strtol(temp.c_str(), &ptr, 16);
+            unescape_param.append(1, (unsigned char) strtol(temp.c_str(), &ptr, 16));
             i += 2;
         } else {
-            unescape_param[write_index] = param[i];
+            unescape_param.append(1, param[i]);
         }
         write_index++;
     }
