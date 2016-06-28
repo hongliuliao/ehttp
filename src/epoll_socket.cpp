@@ -123,11 +123,12 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     socket_handler.on_accept(*epoll_context);
 
     struct epoll_event conn_sock_ev;
-    conn_sock_ev.events = EPOLLIN;
+    conn_sock_ev.events = EPOLLIN | EPOLLONESHOT;
     conn_sock_ev.data.ptr = epoll_context;
 
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
         LOG_ERROR("epoll_ctl: conn_sock:%s", strerror(errno));
+        close_and_release(epollfd, event, socket_handler);
         return -1;
     }
 
@@ -150,11 +151,11 @@ void read_func(void *data) {
         return;
     }
     if (ret == READ_CONTINUE) {
-        event.events = EPOLLIN;
-        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+        event.events = EPOLLIN | EPOLLONESHOT;
+        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
     } else if (ret == READ_OVER) { // READ_OVER
-        event.events = EPOLLOUT;
-        epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
+        event.events = EPOLLOUT | EPOLLONESHOT;
+        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
     } else {
         LOG_ERROR("unkonw ret!");
     }
@@ -162,10 +163,6 @@ void read_func(void *data) {
 }
 
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
-    int fd = epoll_context->fd;
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event); // TODO remove event or use EPOLLET?
-
     TaskData *tdata = new TaskData();
     tdata->epollfd = epollfd;
     tdata->event = event;
@@ -176,8 +173,18 @@ int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSo
     if (ret != 0) {
         LOG_WARN("add read task fail:%d, we will close connect.", ret);
         close_and_release(epollfd, event, socket_handler);
+        delete tdata;
+        delete task;
     }
     return ret;
+    /*
+    TaskData tdata;
+    tdata.epollfd = epollfd;
+    tdata.event = event;
+    tdata.watcher = &socket_handler;
+    read_func(&tdata);
+    return 0;
+    */
 }
 
 void write_func(void *data) {
@@ -193,36 +200,26 @@ void write_func(void *data) {
     int ret = socket_handler.on_writeable(*epoll_context);
     if(ret == WRITE_CONN_CLOSE) {
         close_and_release(epollfd, event, socket_handler);
-        delete tdata;
         return;
     }
 
     if (ret == WRITE_CONN_CONTINUE) {
-        event.events = EPOLLOUT;
+        event.events = EPOLLOUT | EPOLLONESHOT;
     } else {
-        event.events = EPOLLIN;
+        event.events = EPOLLIN | EPOLLONESHOT;
     }
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
-    delete tdata;
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 }
 
 int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
-    int fd = epoll_context->fd;
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
+    TaskData tdata;
+    tdata.epollfd = epollfd;
+    tdata.event = event;
+    tdata.watcher = &socket_handler;
+    
+    write_func(&tdata);
 
-    TaskData *tdata = new TaskData();
-    tdata->epollfd = epollfd;
-    tdata->event = event;
-    tdata->watcher = &socket_handler;
-
-    Task *task = new Task(write_func, tdata);
-    int ret = _thread_pool->add_task(task);
-    if (ret != 0) {
-        LOG_WARN("add write task fail:%d, we will close connect.", ret);
-        close_and_release(epollfd, event, socket_handler);
-    }
-    return ret;
+    return 0;
 }
 
 void EpollSocket::set_thread_pool(ThreadPool *tp) {

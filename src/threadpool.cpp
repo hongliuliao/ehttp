@@ -36,7 +36,7 @@ ThreadPool::~ThreadPool()
 // So created the wrapper function that calls the member function
 // we want to run in the thread.
     extern "C"
-void* start_thread(void* arg)
+void* ss_start_thread(void* arg)
 {
     ThreadPool* tp = (ThreadPool *)arg;
     if (tp->m_scb != NULL) {
@@ -61,7 +61,7 @@ int ThreadPool::start()
     int ret = -1;
     for (int i = 0; i < m_pool_size; i++) {
         pthread_t tid;
-        ret = pthread_create(&tid, NULL, start_thread, (void*) this);
+        ret = pthread_create(&tid, NULL, ss_start_thread, (void*) this);
         if (ret != 0) {
             LOG_ERROR("pthread_create() failed: %d", ret);
             return -1;
