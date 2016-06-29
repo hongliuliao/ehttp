@@ -135,46 +135,43 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     return 0;
 }
 
-void read_func(void *data) {
-    TaskData *tdata = (TaskData *)data;
-    int epollfd = tdata->epollfd;
-    epoll_event event = (tdata->event);
-    EpollSocketWatcher &socket_handler = *(tdata->watcher);
+class ReadTask : public Task {
+public:
+    void run() {
+        EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+        int fd = epoll_context->fd;
 
-    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
-    int fd = epoll_context->fd;
-
-    int ret = socket_handler.on_readable(epollfd, event);
-    if (ret == READ_CLOSE) {
-        close_and_release(epollfd, event, socket_handler);
-        delete tdata;
-        return;
+        int ret = watcher->on_readable(epollfd, event);
+        if (ret == READ_CLOSE) {
+            close_and_release(epollfd, event, *watcher);
+            return;
+        }
+        if (ret == READ_CONTINUE) {
+            event.events = EPOLLIN | EPOLLONESHOT;
+            epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+        } else if (ret == READ_OVER) { // READ_OVER
+            event.events = EPOLLOUT | EPOLLONESHOT;
+            epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+        } else {
+            LOG_ERROR("unkonw ret!");
+        }
     }
-    if (ret == READ_CONTINUE) {
-        event.events = EPOLLIN | EPOLLONESHOT;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-    } else if (ret == READ_OVER) { // READ_OVER
-        event.events = EPOLLOUT | EPOLLONESHOT;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-    } else {
-        LOG_ERROR("unkonw ret!");
-    }
-    delete tdata;
-}
+    
+    int epollfd;
+    epoll_event event;
+    EpollSocketWatcher *watcher;
+};
 
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    TaskData *tdata = new TaskData();
-    tdata->epollfd = epollfd;
-    tdata->event = event;
-    tdata->watcher = &socket_handler;
+    ReadTask rt;
+    rt.epollfd = epollfd;
+    rt.event = event;
+    rt.watcher = &socket_handler;
 
-    Task *task = new Task(read_func, tdata);
-    int ret = _thread_pool->add_task(task);
+    int ret = _thread_pool->add_task(rt);
     if (ret != 0) {
         LOG_WARN("add read task fail:%d, we will close connect.", ret);
         close_and_release(epollfd, event, socket_handler);
-        delete tdata;
-        delete task;
     }
     return ret;
     /*

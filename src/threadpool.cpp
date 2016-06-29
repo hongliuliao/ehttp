@@ -4,18 +4,11 @@
 #include <string.h>
 #include "simple_log.h"
 
-Task::Task(void (*fn_ptr)(void*), void* arg) : m_fn_ptr(fn_ptr), m_arg(arg)
-{
-}
+Task::Task() {}
 
-Task::~Task()
-{
-}
+Task::~Task() {}
 
-void Task::run()
-{
-    (*m_fn_ptr)(m_arg);
-}
+void Task::run() {}
 
 ThreadPool::ThreadPool() {
     m_scb = NULL;
@@ -110,7 +103,7 @@ int ThreadPool::destroy_threadpool()
 
 void* ThreadPool::execute_thread()
 {
-    Task* task = NULL;
+    Task task;
     LOG_DEBUG("Starting thread :%u", pthread_self());
     while(true) {
         // Try to pick a task
@@ -145,14 +138,13 @@ void* ThreadPool::execute_thread()
 
         //cout << "Executing thread " << pthread_self() << endl;
         // execute the task
-        task->run(); //
+        task.run(); //
         //cout << "Done executing thread " << pthread_self() << endl;
-        delete task;
     }
     return NULL;
 }
 
-int ThreadPool::add_task(Task* task)
+int ThreadPool::add_task(Task task)
 {
     m_task_mutex.lock();
 

@@ -58,13 +58,9 @@ class Task
 {
     public:
         //  Task(TCLass::* obj_fn_ptr); // pass an object method pointer
-        Task(void (*fn_ptr)(void*), void* arg); // pass a free function pointer
+        Task(); // pass a free function pointer
         ~Task();
         void run();
-    private:
-        //  TClass* _obj_fn_ptr;
-        void (*m_fn_ptr)(void*);
-        void* m_arg;
 };
 
 typedef void (*thread_start_callback)();
@@ -77,7 +73,7 @@ class ThreadPool
         int start();
         int destroy_threadpool();
         void* execute_thread();
-        int add_task(Task* task);
+        int add_task(Task task);
         void set_thread_start_cb(thread_start_callback f);
         void set_task_size_limit(int size);
         void set_pool_size(int pool_size);
@@ -87,7 +83,7 @@ class ThreadPool
         Mutex m_task_mutex;
         CondVar m_task_cond_var;
         std::vector<pthread_t> m_threads; // storage for threads
-        std::deque<Task*> m_tasks;
+        std::deque<Task> m_tasks;
         volatile int m_pool_state;
         int m_task_size_limit;
 };
