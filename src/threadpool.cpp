@@ -1,14 +1,39 @@
 #include "threadpool.h"
+#include <sys/epoll.h>
+#include <sys/fcntl.h>
+#include <sys/sysinfo.h>
+#include <unistd.h>
 
 #include <errno.h>
 #include <string.h>
 #include "simple_log.h"
+#include "epoll_socket.h"
 
 Task::Task() {}
 
 Task::~Task() {}
 
-void Task::run() {}
+void Task::run() {
+    LOG_DEBUG("start handle read task");
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
+
+    EpollSocketWatcher *es = (EpollSocketWatcher *) watcher;
+    int ret = es->on_readable(epollfd, event);
+    if (ret == READ_CLOSE) {
+        close_and_release(epollfd, event, *es);
+        return;
+    }
+    if (ret == READ_CONTINUE) {
+        event.events = EPOLLIN | EPOLLONESHOT;
+        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    } else if (ret == READ_OVER) { // READ_OVER
+        event.events = EPOLLOUT | EPOLLONESHOT;
+        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+    } else {
+        LOG_ERROR("unkonw ret!");
+    }
+}
 
 ThreadPool::ThreadPool() {
     m_scb = NULL;

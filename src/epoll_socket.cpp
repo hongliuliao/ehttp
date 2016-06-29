@@ -135,39 +135,13 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     return 0;
 }
 
-class ReadTask : public Task {
-public:
-    void run() {
-        EpollContext *epoll_context = (EpollContext *) event.data.ptr;
-        int fd = epoll_context->fd;
-
-        int ret = watcher->on_readable(epollfd, event);
-        if (ret == READ_CLOSE) {
-            close_and_release(epollfd, event, *watcher);
-            return;
-        }
-        if (ret == READ_CONTINUE) {
-            event.events = EPOLLIN | EPOLLONESHOT;
-            epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-        } else if (ret == READ_OVER) { // READ_OVER
-            event.events = EPOLLOUT | EPOLLONESHOT;
-            epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-        } else {
-            LOG_ERROR("unkonw ret!");
-        }
-    }
-    
-    int epollfd;
-    epoll_event event;
-    EpollSocketWatcher *watcher;
-};
-
 int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    ReadTask rt;
+    Task rt;
     rt.epollfd = epollfd;
     rt.event = event;
     rt.watcher = &socket_handler;
 
+    LOG_DEBUG("start handle readable event");
     int ret = _thread_pool->add_task(rt);
     if (ret != 0) {
         LOG_WARN("add read task fail:%d, we will close connect.", ret);

@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <deque>
 #include <vector>
+#include <sys/epoll.h>
 
 const int STARTED = 0;
 const int STOPPED = 1;
@@ -59,8 +60,12 @@ class Task
     public:
         //  Task(TCLass::* obj_fn_ptr); // pass an object method pointer
         Task(); // pass a free function pointer
-        ~Task();
-        void run();
+        virtual ~Task();
+        virtual void run();
+
+        int epollfd;
+        epoll_event event;
+        void *watcher;
 };
 
 typedef void (*thread_start_callback)();
