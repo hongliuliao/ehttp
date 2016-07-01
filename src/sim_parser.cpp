@@ -157,6 +157,8 @@ int unescape(std::string &param, std::string &unescape_param) {
             char *ptr;
             unescape_param.append(1, (unsigned char) strtol(temp.c_str(), &ptr, 16));
             i += 2;
+        } else if (param[i] == '+') {
+            unescape_param.append(" ");
         } else {
             unescape_param.append(1, param[i]);
         }
