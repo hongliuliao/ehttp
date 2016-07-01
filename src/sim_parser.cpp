@@ -371,7 +371,9 @@ int Response::gen_response(std::string &http_version, bool is_keepalive) {
     if (_headers.find("Content-Type") == _headers.end()) {
         _res_bytes << "Content-Type: application/json; charset=UTF-8" << "\r\n";
     }
-    _res_bytes << "Content-Length: " << _body.size() << "\r\n";
+    if (_headers.find("Content-Length") == _headers.end()) {
+        _res_bytes << "Content-Length: " << _body.size() << "\r\n";
+    }
 
     std::string con_status = "Connection: close";
     if(is_keepalive) {
