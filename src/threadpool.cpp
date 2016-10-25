@@ -175,6 +175,7 @@ int ThreadPool::add_task(Task task)
 
     if (m_task_size_limit > 0 && (int) m_tasks.size() > m_task_size_limit) {
         LOG_WARN("task size reach limit:%d", m_task_size_limit);
+        m_task_mutex.unlock();
         return -1;
     }
     m_tasks.push_back(task);
