@@ -73,6 +73,7 @@ int ThreadPool::start()
         return -1;
     }
     if (m_pool_state == STARTED) {
+        LOG_WARN("ThreadPool has started!");
         return 0;
     }
     m_pool_state = STARTED;
@@ -122,7 +123,8 @@ int ThreadPool::destroy_threadpool()
         LOG_DEBUG("pthread_join() returned %d", ret);
         m_task_cond_var.broadcast(); // try waking up a bunch of threads that are still waiting
     }
-    LOG_INFO("%d threads exited from the thread pool", m_pool_size);
+    LOG_INFO("%d threads exited from the thread pool, task size:%u", 
+            m_pool_size, m_tasks.size());
     return 0;
 }
 
@@ -151,7 +153,7 @@ void* ThreadPool::execute_thread()
 
         // If the thread was woken up to notify process shutdown, return from here
         if (m_pool_state == STOPPED) {
-            LOG_DEBUG("Unlocking and exiting: %u", pthread_self());
+            LOG_INFO("Unlocking and exiting: %u", pthread_self());
             m_task_mutex.unlock();
             pthread_exit(NULL);
         }
