@@ -76,6 +76,8 @@ class HttpServer {
         
         int start_async();
 
+        int stop();
+
         int join();
         
         int start_sync();

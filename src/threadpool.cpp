@@ -7,32 +7,16 @@
 #include <errno.h>
 #include <string.h>
 #include "simple_log.h"
-#include "epoll_socket.h"
 
-Task::Task() {}
+Task::Task(void (*fn_ptr)(void*), void* arg) {
+    m_fn_ptr = fn_ptr;
+    m_arg = arg;
+}
 
 Task::~Task() {}
 
 void Task::run() {
-    LOG_DEBUG("start handle read task");
-    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
-    int fd = epoll_context->fd;
-
-    EpollSocketWatcher *es = (EpollSocketWatcher *) watcher;
-    int ret = es->on_readable(epollfd, event);
-    if (ret == READ_CLOSE) {
-        close_and_release(epollfd, event, *es);
-        return;
-    }
-    if (ret == READ_CONTINUE) {
-        event.events = EPOLLIN | EPOLLONESHOT;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-    } else if (ret == READ_OVER) { // READ_OVER
-        event.events = EPOLLOUT | EPOLLONESHOT;
-        epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-    } else {
-        LOG_ERROR("unkonw ret!");
-    }
+   (*m_fn_ptr)(m_arg);
 }
 
 ThreadPool::ThreadPool() {
@@ -130,7 +114,7 @@ int ThreadPool::destroy_threadpool()
 
 void* ThreadPool::execute_thread()
 {
-    Task task;
+    Task *task;
     LOG_DEBUG("Starting thread :%u", pthread_self());
     while(true) {
         // Try to pick a task
@@ -165,13 +149,14 @@ void* ThreadPool::execute_thread()
 
         //cout << "Executing thread " << pthread_self() << endl;
         // execute the task
-        task.run(); //
+        task->run(); //
+        delete task;
         //cout << "Done executing thread " << pthread_self() << endl;
     }
     return NULL;
 }
 
-int ThreadPool::add_task(Task task)
+int ThreadPool::add_task(Task *task)
 {
     m_task_mutex.lock();
 

@@ -55,6 +55,12 @@ int HttpServer::start(int port, int backlog, int max_events) {
     return epoll_socket.start_epoll(port, http_handler, backlog, max_events);
 }
 
+int HttpServer::stop() {
+    LOG_INFO("stoping http server...");
+    return epoll_socket.stop_epoll();
+}
+
+
 void *http_start_routine(void *ptr) {
     HttpServer *hs = (HttpServer *) ptr;
     hs->start_sync();

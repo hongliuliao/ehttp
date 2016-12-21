@@ -51,13 +51,12 @@ class EpollSocketWatcher {
 
 };
 
-struct TaskData {
-    int epollfd;
-    epoll_event event;
-    EpollSocketWatcher *watcher;
-};
 
-int close_and_release(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+enum EpollSocketStatus {
+    S_RUN = 0,
+    S_REJECT_CONN = 1,
+    S_STOP = 2
+};
 
 class EpollSocket {
     private:
@@ -71,22 +70,32 @@ class EpollSocket {
 
         int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
-        int handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
-
         int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+
+        int close_and_release(epoll_event &event);
 
         std::vector<std::string> _bind_ips;
         int _backlog;
         int _port;
+        int _epollfd;
         std::set<int> _listen_sockets;
+        pthread_mutex_t _client_lock;
+        volatile int _clients;
+        
         ThreadPool *_thread_pool;
         bool _use_default_tp;
+        volatile int _status;
+        EpollSocketWatcher *_watcher;
     public:
         EpollSocket();
        
          ~EpollSocket();
+        
+        int handle_readable_event(epoll_event &event);
 
         int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
+        
+        int stop_epoll();
 
         void set_thread_pool(ThreadPool *tp);
 
@@ -94,5 +103,11 @@ class EpollSocket {
 
         void add_bind_ip(std::string ip);
 };
+
+struct TaskData {
+    epoll_event event;
+    EpollSocket *es;
+};
+
 
 #endif /* TCP_EPOLL_H_ */

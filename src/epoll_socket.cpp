@@ -23,6 +23,9 @@
 EpollSocket::EpollSocket() {
     _thread_pool = NULL;
     _use_default_tp = true;
+    _status = S_RUN;
+    _epollfd = -1;
+    pthread_mutex_init(&_client_lock, NULL);
 }
 
 EpollSocket::~EpollSocket() {
@@ -114,6 +117,10 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
         return -1;
     }
     setNonblocking(conn_sock);
+
+    pthread_mutex_lock(&_client_lock);
+    _clients++;
+    pthread_mutex_unlock(&_client_lock);
     LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
 
     EpollContext *epoll_context = new EpollContext();
@@ -126,69 +133,61 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     conn_sock_ev.events = EPOLLIN | EPOLLONESHOT;
     conn_sock_ev.data.ptr = epoll_context;
 
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
+    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
         LOG_ERROR("epoll_ctl: conn_sock:%s", strerror(errno));
-        close_and_release(epollfd, event, socket_handler);
+        close_and_release(event);
         return -1;
     }
 
     return 0;
 }
 
-int EpollSocket::handle_readable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    Task rt;
-    rt.epollfd = epollfd;
-    rt.event = event;
-    rt.watcher = &socket_handler;
-
-    LOG_DEBUG("start handle readable event");
-    int ret = _thread_pool->add_task(rt);
-    if (ret != 0) {
-        LOG_WARN("add read task fail:%d, we will close connect.", ret);
-        close_and_release(epollfd, event, socket_handler);
-    }
-    return ret;
-    /*
-    TaskData tdata;
-    tdata.epollfd = epollfd;
-    tdata.event = event;
-    tdata.watcher = &socket_handler;
-    read_func(&tdata);
-    return 0;
-    */
+void read_func(void *data) {
+    TaskData *td = (TaskData *) data;
+    td->es->handle_readable_event(td->event);
+    delete td;
 }
 
-void write_func(void *data) {
-    TaskData *tdata = (TaskData *)data;
-    int epollfd = tdata->epollfd;
-    epoll_event event = (tdata->event);
-    EpollSocketWatcher &socket_handler = *(tdata->watcher);
+int EpollSocket::handle_readable_event(epoll_event &event) {
+    EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    int fd = epoll_context->fd;
 
+    int ret = _watcher->on_readable(_epollfd, event);
+    if (ret == READ_CLOSE) {
+        return close_and_release(event);
+    }
+    if (ret == READ_CONTINUE) {
+        event.events = EPOLLIN | EPOLLONESHOT;
+        epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
+    } else if (ret == READ_OVER) { // READ_OVER
+        event.events = EPOLLOUT | EPOLLONESHOT;
+        epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
+    } else {
+        LOG_ERROR("unkonw ret!");
+    }
+    return 0;
+}
+
+int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
 
     int ret = socket_handler.on_writeable(*epoll_context);
     if(ret == WRITE_CONN_CLOSE) {
-        close_and_release(epollfd, event, socket_handler);
-        return;
+        return close_and_release(event);
     }
 
     if (ret == WRITE_CONN_CONTINUE) {
         event.events = EPOLLOUT | EPOLLONESHOT;
     } else {
+        if (_status == S_REJECT_CONN) {
+            return close_and_release(event);
+        }
+        // wait for next request
         event.events = EPOLLIN | EPOLLONESHOT;
     }
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
-}
-
-int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
-    TaskData tdata;
-    tdata.epollfd = epollfd;
-    tdata.event = event;
-    tdata.watcher = &socket_handler;
-    
-    write_func(&tdata);
 
     return 0;
 }
@@ -201,6 +200,7 @@ void EpollSocket::set_thread_pool(ThreadPool *tp) {
 int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
     _backlog = backlog;
     _port = port;
+    _watcher = &socket_handler;
 
     if (_thread_pool == NULL) {
         int core_size = get_nprocs();
@@ -220,8 +220,8 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
 
     // The "size" parameter is a hint specifying the number of file
     // descriptors to be associated with the new instance.
-    int epollfd = epoll_create(1024);
-    if (epollfd == -1) {
+    _epollfd = epoll_create(1024);
+    if (_epollfd == -1) {
         LOG_ERROR("epoll_create:%s", strerror(errno));
         return -1;
     }
@@ -231,15 +231,15 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         struct epoll_event ev;
         ev.events = EPOLLIN;
         ev.data.fd = sockfd;
-        if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
+        if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
             LOG_ERROR("epoll_ctl: listen_sock:%s", strerror(errno));
             return -1;
         }
     }
 
     epoll_event *events = new epoll_event[max_events];
-    while (1) {
-        int fds_num = epoll_wait(epollfd, events, max_events, -1);
+    while (_status != S_STOP) {
+        int fds_num = epoll_wait(_epollfd, events, max_events, -1);
         if (fds_num == -1) {
             if (errno == EINTR) { /*The call was interrupted by a signal handler*/
                 continue;
@@ -249,20 +249,33 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         }
 
         for (int i = 0; i < fds_num; i++) {
-            if(_listen_sockets.count(events[i].data.fd)) {
+            if (_listen_sockets.count(events[i].data.fd) && _status == S_RUN) {
                 // accept connection
-                this->handle_accept_event(epollfd, events[i], socket_handler);
-            } else if(events[i].events & EPOLLIN ){
-                // readable
-                this->handle_readable_event(epollfd, events[i], socket_handler);
-            } else if(events[i].events & EPOLLOUT) {
+                this->handle_accept_event(_epollfd, events[i], socket_handler);
+            } else if (events[i].events & EPOLLIN ) {
+                // handle readable async
+                LOG_DEBUG("start handle readable event");
+                TaskData *tdata = new TaskData();
+                tdata->event = events[i];
+                tdata->es = this;
+
+                Task *task = new Task(read_func, tdata);
+                int ret = _thread_pool->add_task(task);
+                if (ret != 0) {
+                    LOG_WARN("add read task fail:%d, we will close connect.", ret);
+                    close_and_release(events[i]);
+                    delete tdata;
+                    delete task;
+                }
+            } else if (events[i].events & EPOLLOUT) {
                 // writeable
-                this->handle_writeable_event(epollfd, events[i], socket_handler);
+                this->handle_writeable_event(_epollfd, events[i], socket_handler);
             } else {
                 LOG_INFO("unkonw events :%d", events[i].events);
             }
         }
     }
+    LOG_INFO("epoll wait loop stop ...");
     if (events != NULL) {
         delete[] events;
         events = NULL;
@@ -270,23 +283,37 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
     return -1;
 }
 
-int close_and_release(int &epollfd, epoll_event &epoll_event, EpollSocketWatcher &socket_handler) {
+int EpollSocket::stop_epoll() {
+    _status = S_REJECT_CONN;
+    LOG_INFO("stop epoll , current clients:%u", _clients);
+    return 0;
+}
+
+int EpollSocket::close_and_release(epoll_event &epoll_event) {
     if (epoll_event.data.ptr == NULL) {
         return 0;
     }
     LOG_DEBUG("connect close");
 
     EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
-    socket_handler.on_close(*hc);
+    _watcher->on_close(*hc);
 
     int fd = hc->fd;
     epoll_event.events = EPOLLIN | EPOLLOUT;
-    epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
+    epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
 
     delete (EpollContext *) epoll_event.data.ptr;
     epoll_event.data.ptr = NULL;
 
     int ret = close(fd);
+
+    pthread_mutex_lock(&_client_lock);
+    _clients--;
+    if (_clients == 0 && _status == S_REJECT_CONN) {
+        _status = S_STOP;
+        LOG_INFO("client is empty and ready for stop server!");
+    }
+    pthread_mutex_unlock(&_client_lock);
     LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
     return ret;
 }
