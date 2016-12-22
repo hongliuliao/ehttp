@@ -25,6 +25,11 @@
 #define READ_CONTINUE 1
 #define READ_CLOSE -1
 
+#define CHECK_RET(ret, msg, args...) if (ret != 0) { \
+    LOG_ERROR(msg, args); \
+    return ret; \
+} \
+
 class EpollContext {
     public:
         void *ptr;
@@ -74,8 +79,21 @@ class EpollSocket {
 
         int close_and_release(epoll_event &event);
 
+        int init_default_tp();
+
+        int init_tp();
+
+        int create_epoll();
+
+        int add_listen_sock_to_epoll();
+
+        int handle_event(epoll_event &e);
+
+        int start_event_loop();
+
         std::vector<std::string> _bind_ips;
         int _backlog;
+        int _max_events;
         int _port;
         int _epollfd;
         std::set<int> _listen_sockets;
@@ -93,11 +111,19 @@ class EpollSocket {
         
         int handle_readable_event(epoll_event &event);
 
-        int start_epoll(int port, EpollSocketWatcher &socket_watcher, int backlog, int max_events);
+        int start_epoll();
         
         int stop_epoll();
 
         void set_thread_pool(ThreadPool *tp);
+
+        void set_port(int port);
+
+        void set_watcher(EpollSocketWatcher *w);
+
+        void set_backlog(int backlog);
+
+        void set_max_events(int max_events);
 
         void set_schedule(ScheduleHandlerPtr h);
 

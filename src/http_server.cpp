@@ -52,7 +52,11 @@ HttpServer::HttpServer() {
 
 int HttpServer::start(int port, int backlog, int max_events) {
     LOG_WARN("start() method is deprecated, please use start_sync() or start_async() instead!");
-    return epoll_socket.start_epoll(port, http_handler, backlog, max_events);
+    epoll_socket.set_port(port);
+    epoll_socket.set_backlog(backlog);
+    epoll_socket.set_max_events(max_events);
+    epoll_socket.set_watcher(&http_handler);
+    return epoll_socket.start_epoll();
 }
 
 int HttpServer::stop() {
@@ -85,7 +89,11 @@ int HttpServer::join() {
 }
 
 int HttpServer::start_sync() {
-    return epoll_socket.start_epoll(_port, http_handler, _backlog, _max_events);
+    epoll_socket.set_port(_port);
+    epoll_socket.set_backlog(_backlog);
+    epoll_socket.set_max_events(_max_events);
+    epoll_socket.set_watcher(&http_handler);
+    return epoll_socket.start_epoll();
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {

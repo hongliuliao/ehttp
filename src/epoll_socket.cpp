@@ -25,6 +25,7 @@ EpollSocket::EpollSocket() {
     _use_default_tp = true;
     _status = S_RUN;
     _epollfd = -1;
+    _clients = 0;
     pthread_mutex_init(&_client_lock, NULL);
 }
 
@@ -138,7 +139,6 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
         close_and_release(event);
         return -1;
     }
-
     return 0;
 }
 
@@ -163,7 +163,7 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
         event.events = EPOLLOUT | EPOLLONESHOT;
         epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
     } else {
-        LOG_ERROR("unkonw ret!");
+        LOG_ERROR("unkonw read ret:%d", ret);
     }
     return 0;
 }
@@ -180,12 +180,14 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
 
     if (ret == WRITE_CONN_CONTINUE) {
         event.events = EPOLLOUT | EPOLLONESHOT;
-    } else {
+    } else if (ret == WRITE_CONN_ALIVE) {
         if (_status == S_REJECT_CONN) {
             return close_and_release(event);
         }
         // wait for next request
         event.events = EPOLLIN | EPOLLONESHOT;
+    } else {
+        LOG_ERROR("unkonw write ret:%d", ret);
     }
     epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
 
@@ -197,35 +199,32 @@ void EpollSocket::set_thread_pool(ThreadPool *tp) {
     _use_default_tp = false;
 }
 
-int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int backlog, int max_events) {
-    _backlog = backlog;
+void EpollSocket::set_port(int port) {
     _port = port;
-    _watcher = &socket_handler;
+}
 
-    if (_thread_pool == NULL) {
-        int core_size = get_nprocs();
-        LOG_INFO("thread pool not set, we will build for core size:%d", core_size);
-        _thread_pool = new ThreadPool();
-        _thread_pool->set_pool_size(core_size);
-    }
-    int ret = _thread_pool->start();
-    if (ret != 0) {
-        LOG_ERROR("thread pool start error:%d", ret);
-        return ret;
-    }
-    ret = this->listen_on();
-    if (ret != 0) {
-        return ret;
-    }
+void EpollSocket::set_watcher(EpollSocketWatcher *w) {
+    _watcher = w;
+}
 
-    // The "size" parameter is a hint specifying the number of file
-    // descriptors to be associated with the new instance.
-    _epollfd = epoll_create(1024);
-    if (_epollfd == -1) {
-        LOG_ERROR("epoll_create:%s", strerror(errno));
-        return -1;
-    }
+void EpollSocket::set_backlog(int backlog) {
+    _backlog = backlog;
+}
 
+void EpollSocket::set_max_events(int me) {
+    _max_events = me;
+}
+
+int EpollSocket::init_default_tp() {
+    int core_size = get_nprocs();
+    LOG_INFO("thread pool not set, we will build for core size:%d", core_size);
+    _thread_pool = new ThreadPool();
+    _thread_pool->set_pool_size(core_size);
+
+    return 0;
+}
+
+int EpollSocket::add_listen_sock_to_epoll() {
     for (std::set<int>::iterator i = _listen_sockets.begin(); i != _listen_sockets.end(); i++) {
         int sockfd = *i;
         struct epoll_event ev;
@@ -236,43 +235,80 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
             return -1;
         }
     }
+    return 0;
+}
 
-    epoll_event *events = new epoll_event[max_events];
+int EpollSocket::handle_event(epoll_event &e) {
+    if (_listen_sockets.count(e.data.fd)) {
+        // accept connection
+        if (_status == S_RUN) {
+            this->handle_accept_event(_epollfd, e, *_watcher);
+        } else {
+            LOG_INFO("current status:%d, not accept new connect", _status);
+            pthread_mutex_lock(&_client_lock);
+            if (_clients == 0 && _status == S_REJECT_CONN) {
+                _status = S_STOP;
+                LOG_INFO("client is empty and ready for stop server!");
+            }
+            pthread_mutex_unlock(&_client_lock);
+        }
+    } else if (e.events & EPOLLIN) {
+        // handle readable async
+        LOG_DEBUG("start handle readable event");
+        TaskData *tdata = new TaskData();
+        tdata->event = e;
+        tdata->es = this;
+
+        Task *task = new Task(read_func, tdata);
+        int ret = _thread_pool->add_task(task);
+        if (ret != 0) {
+            LOG_WARN("add read task fail:%d, we will close connect.", ret);
+            close_and_release(e);
+            delete tdata;
+            delete task;
+        }
+    } else if (e.events & EPOLLOUT) {
+        // writeable
+        this->handle_writeable_event(_epollfd, e, *_watcher);
+    } else {
+        LOG_INFO("unkonw events :%d", e.events);
+    }
+    return 0;
+}
+
+int EpollSocket::create_epoll() {
+    // The "size" parameter is a hint specifying the number of file
+    // descriptors to be associated with the new instance.
+    _epollfd = epoll_create(1024);
+    if (_epollfd == -1) {
+        LOG_ERROR("epoll_create:%s", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int EpollSocket::init_tp() {
+    if (_thread_pool == NULL) {
+        init_default_tp();
+    }
+    int ret = _thread_pool->start();
+    return ret;
+}
+
+int EpollSocket::start_event_loop() {
+    epoll_event *events = new epoll_event[_max_events];
     while (_status != S_STOP) {
-        int fds_num = epoll_wait(_epollfd, events, max_events, -1);
+        int fds_num = epoll_wait(_epollfd, events, _max_events, -1);
         if (fds_num == -1) {
             if (errno == EINTR) { /*The call was interrupted by a signal handler*/
                 continue;
             }
-            LOG_ERROR("epoll_pwait:%s", strerror(errno));
+            LOG_ERROR("epoll_wait error:%s", strerror(errno));
             break;
         }
 
         for (int i = 0; i < fds_num; i++) {
-            if (_listen_sockets.count(events[i].data.fd) && _status == S_RUN) {
-                // accept connection
-                this->handle_accept_event(_epollfd, events[i], socket_handler);
-            } else if (events[i].events & EPOLLIN ) {
-                // handle readable async
-                LOG_DEBUG("start handle readable event");
-                TaskData *tdata = new TaskData();
-                tdata->event = events[i];
-                tdata->es = this;
-
-                Task *task = new Task(read_func, tdata);
-                int ret = _thread_pool->add_task(task);
-                if (ret != 0) {
-                    LOG_WARN("add read task fail:%d, we will close connect.", ret);
-                    close_and_release(events[i]);
-                    delete tdata;
-                    delete task;
-                }
-            } else if (events[i].events & EPOLLOUT) {
-                // writeable
-                this->handle_writeable_event(_epollfd, events[i], socket_handler);
-            } else {
-                LOG_INFO("unkonw events :%d", events[i].events);
-            }
+            this->handle_event(events[i]);
         }
     }
     LOG_INFO("epoll wait loop stop ...");
@@ -280,7 +316,23 @@ int EpollSocket::start_epoll(int port, EpollSocketWatcher &socket_handler, int b
         delete[] events;
         events = NULL;
     }
-    return -1;
+    return 0;
+}
+
+int EpollSocket::start_epoll() {
+    int ret = init_tp();
+    CHECK_RET(ret, "thread pool start error:%d", ret);
+
+    ret = this->listen_on();
+    CHECK_RET(ret, "listen err:%d", ret);
+
+    ret = this->create_epoll();
+    CHECK_RET(ret, "create epoll err:%d", ret);
+
+    ret = this->add_listen_sock_to_epoll();
+    CHECK_RET(ret , "add listen sock to epoll fail:%d", ret);
+
+    return start_event_loop();
 }
 
 int EpollSocket::stop_epoll() {
@@ -314,6 +366,7 @@ int EpollSocket::close_and_release(epoll_event &epoll_event) {
         LOG_INFO("client is empty and ready for stop server!");
     }
     pthread_mutex_unlock(&_client_lock);
+
     LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
     return ret;
 }
