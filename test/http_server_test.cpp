@@ -95,8 +95,8 @@ int main(int argc, char **args) {
     http_server.set_max_events(100000);
     //http_server.add_bind_ip("192.168.238.158");
     http_server.start_async();
-    sleep(1);
-    http_server.stop();
+    //sleep(1);
+    //http_server.stop();
     http_server.join();
     return 0;
 }

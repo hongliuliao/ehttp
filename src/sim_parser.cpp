@@ -465,6 +465,6 @@ Response &HttpContext::get_res() {
     return *_res;
 }
 
-Request &HttpContext::get_requset() {
+Request &HttpContext::get_request() {
     return *_req;
 }

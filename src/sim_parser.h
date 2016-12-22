@@ -187,7 +187,7 @@ class HttpContext {
 
         Response &get_res();
 
-        Request &get_requset();
+        Request &get_request();
         
         int _fd;
         timeval _start;

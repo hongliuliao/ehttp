@@ -191,11 +191,11 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
     }
     LOG_DEBUG("read success which read size:%d", read_size);
     HttpContext *http_context = (HttpContext *) epoll_context->ptr;
-    if (http_context->get_requset()._parse_part == PARSE_REQ_LINE) {
+    if (http_context->get_request()._parse_part == PARSE_REQ_LINE) {
         http_context->record_start_time();
     }
 
-    int ret = http_context->get_requset().parse_request(read_buffer, read_size);
+    int ret = http_context->get_request().parse_request(read_buffer, read_size);
     if (ret < 0) {
         return READ_CLOSE;
     }
@@ -208,7 +208,7 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
         return READ_OVER;
     } 
 
-    this->handle_request(http_context->get_requset(), http_context->get_res());
+    this->handle_request(http_context->get_request(), http_context->get_res());
 
     return READ_OVER;
 }
@@ -216,11 +216,12 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
 int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
     int fd = epoll_context.fd;
     HttpContext *hc = (HttpContext *) epoll_context.ptr;
+    Request &req = hc->get_request();
     Response &res = hc->get_res();
-    bool is_keepalive = (strcasecmp(hc->get_requset().get_header("Connection").c_str(), "keep-alive") == 0);
+    bool is_keepalive = (strcasecmp(req.get_header("Connection").c_str(), "keep-alive") == 0);
 
     if (!res._is_writed) {
-        std::string http_version = hc->get_requset()._line.get_http_version();
+        std::string http_version = req._line.get_http_version();
         res.gen_response(http_version, is_keepalive);
         res._is_writed = true;
     }
@@ -249,7 +250,12 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
     }
 
     if (ret == 0 && nwrite == read_size) {
-        hc->print_access_log(epoll_context.client_ip);
+        std::string http_method = req._line.get_method();
+        std::string request_url = req._line.get_request_url();
+        int cost_time = hc->get_cost_time();
+        LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
+                http_method.c_str(), request_url.c_str(), res._code_msg.status_code,
+                cost_time, res._body.size(), epoll_context.client_ip.c_str());
     }
 
     if (is_keepalive && nwrite > 0) {
