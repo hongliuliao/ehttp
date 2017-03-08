@@ -24,6 +24,8 @@ void a_test_fn() {
 
 void hello(Request &request, Json::Value &root) {
 	root["hello"] = "world";
+    
+    LOG_INFO("get client ip:%s", request.get_client_ip()->c_str());
     pthread_t t = pthread_self();
     int *tmp = (int*)pthread_getspecific(g_tp_key);
     if (tmp == NULL) {

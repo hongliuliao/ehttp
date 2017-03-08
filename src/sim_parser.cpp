@@ -49,7 +49,6 @@ int RequestParam::parse_query_url(std::string &query_url) {
     return 0;
 }
 
-
 std::string RequestLine::get_request_uri() {
     std::stringstream ss(this->get_request_url());
     std::string uri;
@@ -198,6 +197,10 @@ std::string Request::get_request_uri() {
     return _line.get_request_uri();
 }
 
+std::string Request::get_request_url() {
+    return _line.get_request_url();
+}
+
 int ss_on_url(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
     std::string url;
@@ -302,6 +305,7 @@ Request::Request() {
     _total_req_size = 0;
     _last_was_value = true; // add new field for first
     _parse_err = 0;
+    _client_ip = NULL;
 
     http_parser_settings_init(&_settings);
     _settings.on_url = ss_on_url;
@@ -349,6 +353,14 @@ RequestBody *Request::get_body() {
 
 std::string Request::get_method() {
     return _line.get_method();
+}
+
+std::string *Request::get_client_ip() {
+    return _client_ip;
+}
+
+void Request::set_client_ip(std::string *ci) {
+    this->_client_ip = ci;
 }
 
 Response::Response(CodeMsg status_code) {

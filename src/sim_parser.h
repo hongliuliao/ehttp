@@ -40,8 +40,16 @@ const static int PARSE_LEN_REQUIRED = 2;
 class RequestParam {
     public:
 
+        /**
+         * get param by name
+         * when not found , return empty string
+         */
         std::string get_param(std::string &name);
 
+        /**
+         * get params by name
+         * when params in url like age=1&age=2, it will return [1, 2]
+         */
         void get_params(std::string &name, std::vector<std::string> &params);
 
         /**
@@ -52,9 +60,28 @@ class RequestParam {
         std::multimap<std::string, std::string> _params;
 };
 
+/**
+ * parse for http protocol first line, like below:
+ * GET /login?name=tom&age=1 HTTP/1.0
+ */
 class RequestLine {
     public:
+        /**
+         * return "GET" or "POST"
+         */
+        std::string get_method();
+        /**
+         * like /login
+         */
         std::string get_request_uri();
+        /**
+         * like /login?name=tom&age=1
+         */
+        std::string get_request_url();
+        /**
+         * return "HTTP/1.0" or "HTTP/1.1"
+         */
+        std::string get_http_version();
 
         RequestParam &get_request_param();
 
@@ -64,17 +91,12 @@ class RequestLine {
          */
         int parse_request_url_params();
         
-        std::string get_method();
         
         void set_method(std::string m);
-        
-        std::string get_request_url();
         
         void set_request_url(std::string url);
         
         void append_request_url(std::string p_url);
-        
-        std::string get_http_version();
         
         void set_http_version(std::string v);
     private:
@@ -84,13 +106,23 @@ class RequestLine {
         std::string _http_version; // like HTTP/1.1
 };
 
-
 class RequestBody {
     public:
+
+        /**
+         * when Content-Type is "application/x-www-form-urlencoded"
+         * we will parse the request body , it will excepted like below
+         *
+         *     "name=tom&age=1"
+         *
+         */
         std::string get_param(std::string name);
 
         void get_params(std::string &name, std::vector<std::string> &params);
 
+        /**
+         * get request body bytes
+         */
         std::string *get_raw_string();
 
         RequestParam *get_req_params();
@@ -107,15 +139,30 @@ class Request {
 
         std::string get_param(std::string name);
 
+        /**
+         * Now, it's the same as get_param(std::string name);
+         */
         std::string get_unescape_param(std::string name);
 
         void get_params(std::string &name, std::vector<std::string> &params);
 
-        void add_header(std::string &name, std::string &value);
-
         std::string get_header(std::string name);
 
+        /**
+         * return like /login
+         */
         std::string get_request_uri();
+        
+        /**
+         * return like /login?name=tom&age=1
+         */
+        std::string get_request_url();
+
+        std::string *get_client_ip();
+
+        void set_client_ip(std::string *ip);
+        
+        void add_header(std::string &name, std::string &value);
 
         int parse_request(const char *read_buffer, int read_size);
 
@@ -137,7 +184,7 @@ class Request {
         RequestBody _body;
         http_parser_settings _settings;
         http_parser _parser;
-
+        std::string *_client_ip;
 };
 
 class Response {

@@ -208,6 +208,7 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
         return READ_OVER;
     } 
 
+    http_context->get_request().set_client_ip(&epoll_context->client_ip);
     this->handle_request(http_context->get_request(), http_context->get_res());
 
     return READ_OVER;
