@@ -10,6 +10,7 @@
 #include "simple_log.h"
 #include "sim_parser.h"
 #include "http_parser.h"
+#include "multipart_parser.h"
 
 #define MAX_REQ_SIZE 10485760
 #define EHTTP_VERSION "1.0.2"
@@ -46,6 +47,11 @@ int RequestParam::parse_query_url(std::string &query_url) {
             _params.insert(std::pair<std::string, std::string>(key, value));
         }
     }
+    return 0;
+}
+    
+int RequestParam::add_param_pair(const std::string &key, const std::string &value) {
+    _params.insert(std::pair<std::string, std::string>(key, value));
     return 0;
 }
 
@@ -130,6 +136,21 @@ std::string *RequestBody::get_raw_string() {
 RequestParam *RequestBody::get_req_params() {
     return &_req_params;
 }
+
+int RequestBody::parse_multi_params() {
+    if (_multi_names.size() != _multi_datas.size()) {
+        LOG_ERROR("multi name size:%lu, data size:%lu not match!", 
+                _multi_names.size(), _multi_datas.size());
+        return -1;
+    } 
+    for (size_t i = 0; i < _multi_names.size(); i++) {
+        _req_params.add_param_pair(_multi_names[i], _multi_datas[i]);
+        LOG_DEBUG("request body add param name:%s, data:%s", 
+                _multi_names[i].c_str(), _multi_datas[i].c_str());
+    }
+    return 0;
+}
+
 
 std::string Request::get_param(std::string name) {
     if (_line.get_method() == "GET") {
@@ -286,14 +307,149 @@ int ss_on_body(http_parser *p, const char *buf, size_t len) {
     return 0;
 }
 
+int ss_split_str(const std::string &input, const char s, std::vector<std::string> &tokens) {
+    if (input.empty()) {
+        return 0;
+    }
+    std::stringstream ss;
+    ss << input;
+    std::string token;
+    while (std::getline(ss, token, s)) {
+        tokens.push_back(token);
+    }
+    return 0;
+}
+
+int ss_on_multipart_name(multipart_parser* p, const char *at, size_t length) {
+    std::string s;
+    s.assign(at, length);
+    Request *req = (Request *)multipart_parser_get_data(p);
+    if (s == "Content-Disposition") {
+        req->_multi_need_value = true;
+    }
+    LOG_DEBUG("get multipart_name:%s", s.c_str());
+    return 0;
+}
+
+// parse data like "form-data; name="files"; filename="test_thread_cancel.cc""
+int ss_parse_multi_disposition_name(const std::string &input, std::string &output) {
+    std::vector<std::string> pos_tokens;
+    ss_split_str(input, ';', pos_tokens);
+    if (pos_tokens.size() < 2) {
+        LOG_ERROR("ss_parse_multi_disposition_name err, input:%s", input.c_str());
+        return -1;
+    }
+    std::vector<std::string> name_tokens;
+    ss_split_str(pos_tokens[1], '=', name_tokens);
+    if (name_tokens.size() != 2) {
+        LOG_ERROR("ss_parse_multi_disposition_name(in name) err, input:%s", input.c_str());
+        return -1;
+    } 
+    output = name_tokens[1];
+    output = output.substr(1, output.size() - 2); // remove ""
+    if (output.empty()) {
+        LOG_ERROR("ss_parse_multi_disposition_name(in name) err, name is empty");
+        return -1;
+    }
+    return 0;
+}
+
+int ss_on_multipart_value(multipart_parser* p, const char *at, size_t length) {
+    std::string s;
+    s.assign(at, length);
+    Request *req = (Request *)multipart_parser_get_data(p);
+    if (req->_multi_need_value) {
+        std::string ds_name;
+        int ret = ss_parse_multi_disposition_name(s, ds_name);
+        if (ret != 0) {
+            LOG_ERROR("ss_parse_multi_disposition_name fail, ret:%d, input:%s", ret, s.c_str());
+            return ret;
+        }
+        req->get_body()->_multi_names.push_back(ds_name); 
+        req->_multi_need_value = false;
+    }
+    LOG_DEBUG("get multipart_value:%s", s.c_str());
+    return 0;
+}
+
+int ss_on_multipart_data(multipart_parser* p, const char *at, size_t length) {
+    std::string s;
+    s.assign(at, length);
+    Request *req = (Request *)multipart_parser_get_data(p);
+    if (s.empty()) {
+        LOG_DEBUG("multipart data is empty()");
+        return 0;
+    }
+    req->get_body()->_multi_datas.push_back(s); 
+    
+    LOG_DEBUG("get multipart_data:%s", s.c_str());
+    return 0;
+}
+
+int ss_on_multipart_body_end(multipart_parser* p) {
+    Request *req = (Request *)multipart_parser_get_data(p);
+    LOG_DEBUG("get multipart_body end, params size:%lu", req->get_body()->_multi_names.size());
+    return req->get_body()->parse_multi_params();
+}
+
+// parse multipart data like "Content-Type:multipart/form-data; boundary=----GKCBY7qhFd3TrwA"
+int ss_parse_multipart_data(Request *req) {
+    std::string *body = req->get_body()->get_raw_string();
+    if (body->empty()) {
+        LOG_DEBUG("multipart data is empty, url:%s", req->get_request_url().c_str());
+        return 0;
+    }
+    // parse boundary
+    std::string ct = req->get_header("Content-Type");
+    std::vector<std::string> ct_tokens;
+    int ret = ss_split_str(ct, ';', ct_tokens);
+    if (ret != 0 || ct_tokens.size() != 2) {
+        LOG_ERROR("parse multipart data content type err:%d, ct:%s", ret, ct.c_str());
+        return ret;
+    }
+    std::vector<std::string> boundary_tokens;
+    ret = ss_split_str(ct_tokens[1], '=', boundary_tokens);
+    if (ret != 0 || boundary_tokens.size() != 2) {
+        LOG_ERROR("parse multipart data(boundary) content type err:%d, ct:%s", ret, ct.c_str());
+        return ret;
+    }
+    std::string boundary = "--" + boundary_tokens[1];
+    LOG_DEBUG("get url:%s, bounday:%s", req->get_request_url().c_str(), boundary.c_str());
+
+    multipart_parser_settings mp_settings;
+    memset(&mp_settings, 0, sizeof(multipart_parser_settings));
+    mp_settings.on_header_field = ss_on_multipart_name;
+    mp_settings.on_header_value = ss_on_multipart_value;
+    mp_settings.on_part_data = ss_on_multipart_data;
+    mp_settings.on_body_end = ss_on_multipart_body_end;
+
+    multipart_parser* parser = multipart_parser_init(boundary.c_str(), &mp_settings);
+    multipart_parser_set_data(parser, req);
+    size_t parsed = multipart_parser_execute(parser, body->c_str(), body->size());
+    if (parsed != body->size()) {
+        LOG_WARN("parse multipart data err, parsed:%lu, total:%lu, url:%s", 
+                parsed, body->size(), req->get_request_url().c_str());
+    }
+    LOG_DEBUG("multipart_parser_execute, parsed:%lu, total:%lu", 
+                parsed, body->size());
+    multipart_parser_free(parser);
+
+    return 0;
+}
+
 int ss_on_message_complete(http_parser *p) {
     Request *req = (Request *) p->data;
+    std::string ct_header = req->get_header("Content-Type");
     // parse body params
-    if (req->get_header("Content-Type") == "application/x-www-form-urlencoded") {
+    if (ct_header == "application/x-www-form-urlencoded") {
         std::string *raw_str = req->get_body()->get_raw_string();
         if (raw_str->size()) {
             req->get_body()->get_req_params()->parse_query_url(*raw_str);
         }
+    }
+    if (ct_header.find("multipart/form-data") != std::string::npos) {
+        LOG_DEBUG("start parse multipart data! content type:%s", ct_header.c_str());
+        ss_parse_multipart_data(req);
     }
     req->_parse_part = PARSE_REQ_OVER;
     LOG_DEBUG("msg COMPLETE!");
@@ -304,6 +460,7 @@ Request::Request() {
     _parse_part = PARSE_REQ_LINE;
     _total_req_size = 0;
     _last_was_value = true; // add new field for first
+    _multi_need_value = true;
     _parse_err = 0;
     _client_ip = NULL;
 
@@ -368,7 +525,7 @@ Response::Response(CodeMsg status_code) {
     this->_is_writed = 0;
 }
 
-void Response::set_head(std::string name, std::string &value) {
+void Response::set_head(const std::string &name, const std::string &value) {
     this->_headers[name] = value;
 }
 

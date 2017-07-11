@@ -56,6 +56,8 @@ class RequestParam {
          * query_url : name=tom&age=3
          */
         int parse_query_url(std::string &query_url);
+
+        int add_param_pair(const std::string &key, const std::string &value);
     private:
         std::multimap<std::string, std::string> _params;
 };
@@ -126,6 +128,11 @@ class RequestBody {
         std::string *get_raw_string();
 
         RequestParam *get_req_params();
+
+        int parse_multi_params();
+
+        std::vector<std::string> _multi_names;
+        std::vector<std::string> _multi_datas;
     private:
         std::string _raw_string;
         RequestParam _req_params;
@@ -173,6 +180,7 @@ class Request {
         std::string get_method();
 
         bool _last_was_value;
+        bool _multi_need_value;
         std::vector<std::string> _header_fields;
         std::vector<std::string> _header_values;
         int _parse_part;
@@ -192,7 +200,7 @@ class Response {
         Response(CodeMsg status_code = STATUS_OK);
         Response(CodeMsg status_code, Json::Value &body);
 
-        void set_head(std::string name, std::string &value);
+        void set_head(const std::string &name, const std::string &value);
 
         void set_body(Json::Value &body);
 
