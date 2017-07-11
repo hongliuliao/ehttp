@@ -10,6 +10,7 @@ ehttp
 ## 依赖
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) v0.6.0 json序列化组件
  * [http-parser](https://github.com/nodejs/http-parser) For parse http requset 
+ * [multipart-parser-c](https://github.com/iafonov/multipart-parser-c) For parse multipart data
 
 ## 性能(without log print)
  * qps 12000+ (短连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
