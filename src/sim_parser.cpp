@@ -121,6 +121,59 @@ void RequestLine::set_http_version(std::string v) {
     _http_version = v;
 }
 
+FileItem::FileItem() {
+    _is_file = false;
+    _parse_state = PARSE_MULTI_DISPOSITION;
+}
+
+bool FileItem::is_file() {
+    return _is_file;
+}
+
+std::string *FileItem::get_fieldname() {
+    return &_name;
+}
+
+std::string *FileItem::get_filename() {
+    return &_filename;
+}
+
+std::string *FileItem::get_content_type() {
+    return &_content_type;
+}
+
+std::string *FileItem::get_data() {
+    return &_data;
+}
+
+void FileItem::set_is_file() {
+    _is_file = true;
+}
+
+void FileItem::set_name(const std::string &name) {
+    _name = name;    
+}
+
+void FileItem::set_filename(const std::string &filename) {
+    _filename = filename;    
+}
+
+void FileItem::set_data(const char *c, int len) {
+    _data.assign(c, len);    
+}
+
+void FileItem::set_content_type(const char *c, int len) {
+    _content_type.assign(c, len);    
+}
+
+bool FileItem::get_parse_state() {
+    return _parse_state;
+}
+
+void FileItem::set_parse_state(int state) {
+    _parse_state = state;
+}
+
 std::string RequestBody::get_param(std::string name) {
     return _req_params.get_param(name);
 }
@@ -138,19 +191,20 @@ RequestParam *RequestBody::get_req_params() {
 }
 
 int RequestBody::parse_multi_params() {
-    if (_multi_names.size() != _multi_datas.size()) {
-        LOG_ERROR("multi name size:%lu, data size:%lu not match!", 
-                _multi_names.size(), _multi_datas.size());
-        return -1;
-    } 
-    for (size_t i = 0; i < _multi_names.size(); i++) {
-        _req_params.add_param_pair(_multi_names[i], _multi_datas[i]);
+    for (size_t i = 0; i < _file_items.size(); i++) {
+        FileItem &item = _file_items[i];
+        std::string *field_name = item.get_fieldname();
+        std::string *field_value = item.get_data();
+        _req_params.add_param_pair(*field_name, *field_value);
         LOG_DEBUG("request body add param name:%s, data:%s", 
-                _multi_names[i].c_str(), _multi_datas[i].c_str());
+                field_name->c_str(), field_value->c_str());
     }
     return 0;
 }
 
+std::vector<FileItem> *RequestBody::get_file_items() {
+    return &_file_items;
+}
 
 std::string Request::get_param(std::string name) {
     if (_line.get_method() == "GET") {
@@ -324,23 +378,24 @@ int ss_on_multipart_name(multipart_parser* p, const char *at, size_t length) {
     std::string s;
     s.assign(at, length);
     Request *req = (Request *)multipart_parser_get_data(p);
+    std::vector<FileItem> *items = req->get_body()->get_file_items();
     if (s == "Content-Disposition") {
-        req->_multi_need_value = true;
+        FileItem item;
+        item.set_parse_state(PARSE_MULTI_DISPOSITION);
+        items->push_back(item);
+    }
+    if (s == "Content-Type") {
+        CHECK_ERR(items->empty(), "items is empty! len:%lu", length); 
+        FileItem &item = (*items)[items->size() - 1];
+        item.set_parse_state(PARSE_MULTI_CONTENT_TYPE);
     }
     LOG_DEBUG("get multipart_name:%s", s.c_str());
     return 0;
 }
 
-// parse data like "form-data; name="files"; filename="test_thread_cancel.cc""
-int ss_parse_multi_disposition_name(const std::string &input, std::string &output) {
-    std::vector<std::string> pos_tokens;
-    ss_split_str(input, ';', pos_tokens);
-    if (pos_tokens.size() < 2) {
-        LOG_ERROR("ss_parse_multi_disposition_name err, input:%s", input.c_str());
-        return -1;
-    }
+int ss_parse_disposition_value(const std::string &input, std::string &output) {
     std::vector<std::string> name_tokens;
-    ss_split_str(pos_tokens[1], '=', name_tokens);
+    ss_split_str(input, '=', name_tokens);
     if (name_tokens.size() != 2) {
         LOG_ERROR("ss_parse_multi_disposition_name(in name) err, input:%s", input.c_str());
         return -1;
@@ -354,19 +409,45 @@ int ss_parse_multi_disposition_name(const std::string &input, std::string &outpu
     return 0;
 }
 
+// parse data like "form-data; name="files"; filename="test_thread_cancel.cc""
+int ss_parse_multi_disposition(const std::string &input, FileItem &item) {
+    std::vector<std::string> pos_tokens;
+    ss_split_str(input, ';', pos_tokens);
+    if (pos_tokens.size() < 2) {
+        LOG_ERROR("ss_parse_multi_disposition_name err, input:%s", input.c_str());
+        return -1;
+    }
+    std::string fieldname;
+    int ret = ss_parse_disposition_value(pos_tokens[1], fieldname); 
+    CHECK_RET(ret, "parse disposition fieldname error!, input:%s", input.c_str());
+    item.set_name(fieldname);
+    
+    if (pos_tokens.size() >=3) {
+        item.set_is_file();
+        std::string filename;
+        ret = ss_parse_disposition_value(pos_tokens[2], filename); 
+        CHECK_RET(ret, "parse disposition filename error!, input:%s", input.c_str());
+        item.set_filename(filename);
+    }
+    return 0;
+}
+
 int ss_on_multipart_value(multipart_parser* p, const char *at, size_t length) {
     std::string s;
     s.assign(at, length);
     Request *req = (Request *)multipart_parser_get_data(p);
-    if (req->_multi_need_value) {
-        std::string ds_name;
-        int ret = ss_parse_multi_disposition_name(s, ds_name);
-        if (ret != 0) {
-            LOG_ERROR("ss_parse_multi_disposition_name fail, ret:%d, input:%s", ret, s.c_str());
-            return ret;
-        }
-        req->get_body()->_multi_names.push_back(ds_name); 
-        req->_multi_need_value = false;
+    std::vector<FileItem> *items = req->get_body()->get_file_items();
+    if (items->empty()) {
+        LOG_ERROR("items is empty in parse multi value!");
+        return -1;
+    }
+    FileItem &item = (*items)[items->size() - 1];
+    if (item.get_parse_state() == PARSE_MULTI_DISPOSITION) {
+        int ret = ss_parse_multi_disposition(s, item);
+        CHECK_RET(ret, "parse multi dispostion err:%d, input:%s", ret, s.c_str());
+    }
+    if (item.get_parse_state() == PARSE_MULTI_CONTENT_TYPE) {
+        item.set_content_type(at, length);
     }
     LOG_DEBUG("get multipart_value:%s", s.c_str());
     return 0;
@@ -375,20 +456,25 @@ int ss_on_multipart_value(multipart_parser* p, const char *at, size_t length) {
 int ss_on_multipart_data(multipart_parser* p, const char *at, size_t length) {
     std::string s;
     s.assign(at, length);
-    Request *req = (Request *)multipart_parser_get_data(p);
     if (s.empty()) {
         LOG_DEBUG("multipart data is empty()");
         return 0;
     }
-    req->get_body()->_multi_datas.push_back(s); 
-    
+    Request *req = (Request *)multipart_parser_get_data(p);
+    std::vector<FileItem> *items = req->get_body()->get_file_items();
+    CHECK_ERR(items->empty(), "items is empty!, length:%lu", length); 
+
+    FileItem &item = (*items)[items->size() - 1];
+    item.set_data(at, length);
+    item.set_parse_state(PARSE_MULTI_OVER); 
+
     LOG_DEBUG("get multipart_data:%s", s.c_str());
     return 0;
 }
 
 int ss_on_multipart_body_end(multipart_parser* p) {
     Request *req = (Request *)multipart_parser_get_data(p);
-    LOG_DEBUG("get multipart_body end, params size:%lu", req->get_body()->_multi_names.size());
+    LOG_DEBUG("get multipart_body end, params size:%lu", req->get_body()->get_file_items()->size());
     return req->get_body()->parse_multi_params();
 }
 
@@ -460,7 +546,6 @@ Request::Request() {
     _parse_part = PARSE_REQ_LINE;
     _total_req_size = 0;
     _last_was_value = true; // add new field for first
-    _multi_need_value = true;
     _parse_err = 0;
     _client_ip = NULL;
 

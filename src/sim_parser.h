@@ -34,6 +34,11 @@ const static int PARSE_REQ_BODY = 2;
 const static int PARSE_REQ_OVER = 3;
 const static int PARSE_REQ_HEAD_OVER = 4;
 
+const static int PARSE_MULTI_DISPOSITION = 0;
+const static int PARSE_MULTI_CONTENT_TYPE = 1;
+//const static int PARSE_MULTI_DATA = 2;
+const static int PARSE_MULTI_OVER = 3;
+
 const static int NEED_MORE_STATUS = 1;
 const static int PARSE_LEN_REQUIRED = 2;
 
@@ -108,6 +113,30 @@ class RequestLine {
         std::string _http_version; // like HTTP/1.1
 };
 
+class FileItem {
+    public:
+        FileItem();
+        bool is_file();
+        std::string *get_fieldname();
+        std::string *get_filename();
+        std::string *get_content_type();
+        std::string *get_data();
+        bool get_parse_state();
+        void set_is_file();
+        void set_name(const std::string &name);
+        void set_filename(const std::string &filename);
+        void set_data(const char *c, int len);
+        void set_content_type(const char *c, int len);
+        void set_parse_state(int state);
+    private:
+        bool _is_file;
+        bool _parse_state;
+        std::string _content_type;
+        std::string _name;
+        std::string _filename;
+        std::string _data;
+};
+
 class RequestBody {
     public:
 
@@ -131,11 +160,12 @@ class RequestBody {
 
         int parse_multi_params();
 
-        std::vector<std::string> _multi_names;
-        std::vector<std::string> _multi_datas;
+        std::vector<FileItem> *get_file_items();
+
     private:
         std::string _raw_string;
         RequestParam _req_params;
+        std::vector<FileItem> _file_items;
 };
 
 class Request {
@@ -180,7 +210,6 @@ class Request {
         std::string get_method();
 
         bool _last_was_value;
-        bool _multi_need_value;
         std::vector<std::string> _header_fields;
         std::vector<std::string> _header_values;
         int _parse_part;

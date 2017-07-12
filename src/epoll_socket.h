@@ -25,11 +25,6 @@
 #define READ_CONTINUE 1
 #define READ_CLOSE -1
 
-#define CHECK_RET(ret, msg, args...) if (ret != 0) { \
-    LOG_ERROR(msg, args); \
-    return ret; \
-} \
-
 class EpollContext {
     public:
         void *ptr;

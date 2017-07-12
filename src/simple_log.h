@@ -35,6 +35,17 @@ extern int log_level;
 		log_debug("%s %s(%d): " format, "DEBUG", __FILE__, __LINE__, ##args); \
     }
 
+#define CHECK_RET(ret, msg, args...) if (ret != 0) { \
+    LOG_ERROR(msg, args); \
+    return ret; \
+} \
+
+#define CHECK_ERR(ret, msg, args...) if (ret) { \
+    LOG_ERROR(msg, args); \
+    return ret; \
+} \
+
+
 
 std::string _get_show_time();
 

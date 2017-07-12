@@ -13,11 +13,28 @@
 #include "threadpool.h"
 
 void file_action(Request &request, Json::Value &root) {
-	std::string fileId = request.get_param("fileId");
+	/*
+    std::string fileId = request.get_param("fileId");
 	std::string files = request.get_param("files");
+	std::string files2 = request.get_param("files2");
 
 	LOG_INFO("get fileId:%s", fileId.c_str());
 	LOG_INFO("get files:%s", files.c_str());
+	LOG_INFO("get files2:%s", files2.c_str());
+    */
+    // get file items
+    std::vector<FileItem> *items = request.get_body()->get_file_items();
+    for (size_t i = 0; i < items->size(); i++) {
+        FileItem &item = (*items)[i];
+        if (item.is_file()) {
+            LOG_INFO("item name:%s, filename:%s, content-type:%s, data:%s", 
+                    item.get_fieldname()->c_str(), item.get_filename()->c_str(),
+                    item.get_content_type()->c_str(), item.get_data()->c_str());
+        } else {
+            LOG_INFO("item name:%s, data:%s", 
+                    item.get_fieldname()->c_str(), item.get_data()->c_str());
+        }
+    }
 	root["code"] = 0;
 	root["msg"] = "login success!";
 }
