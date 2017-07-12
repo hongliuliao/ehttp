@@ -13,7 +13,7 @@
 #include "multipart_parser.h"
 
 #define MAX_REQ_SIZE 10485760
-#define EHTTP_VERSION "1.0.2"
+#define EHTTP_VERSION "1.0.3"
 
 std::string RequestParam::get_param(std::string &name) {
     std::multimap<std::string, std::string>::iterator i = this->_params.find(name);
