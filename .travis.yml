@@ -3,3 +3,4 @@ compiler:
 - g++
 os:
 - linux
+script: make && make test
