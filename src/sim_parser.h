@@ -105,7 +105,7 @@ class RequestLine {
         
         void append_request_url(std::string p_url);
         
-        void set_http_version(std::string v);
+        void set_http_version(const std::string &v);
     private:
         RequestParam _param;
         std::string _method;       // like GET/POST

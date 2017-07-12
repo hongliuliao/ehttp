@@ -117,7 +117,7 @@ std::string RequestLine::get_http_version() {
     return _http_version;
 }
 
-void RequestLine::set_http_version(std::string v) {
+void RequestLine::set_http_version(const std::string &v) {
     _http_version = v;
 }
 
