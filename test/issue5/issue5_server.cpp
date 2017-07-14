@@ -27,9 +27,9 @@ void file_action(Request &request, Json::Value &root) {
     for (size_t i = 0; i < items->size(); i++) {
         FileItem &item = (*items)[i];
         if (item.is_file()) {
-            LOG_INFO("item name:%s, filename:%s, content-type:%s, data:%s", 
+            LOG_INFO("item name:%s, filename:%s, content-type:%s, data:%d", 
                     item.get_fieldname()->c_str(), item.get_filename()->c_str(),
-                    item.get_content_type()->c_str(), item.get_data()->c_str());
+                    item.get_content_type()->c_str(), item.get_data()->size());
         } else {
             LOG_INFO("item name:%s, data:%s", 
                     item.get_fieldname()->c_str(), item.get_data()->c_str());

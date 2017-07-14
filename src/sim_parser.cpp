@@ -401,6 +401,11 @@ int ss_parse_disposition_value(const std::string &input, std::string &output) {
         return -1;
     } 
     output = name_tokens[1];
+    if (output == "\"\"") {
+        LOG_DEBUG("filename is empty, input:%s", input.c_str());
+        output = "";
+        return 0;
+    }
     output = output.substr(1, output.size() - 2); // remove ""
     if (output.empty()) {
         LOG_ERROR("ss_parse_multi_disposition_name(in name) err, name is empty");
@@ -454,7 +459,10 @@ int ss_on_multipart_value(multipart_parser* p, const char *at, size_t length) {
 }
 
 int ss_on_multipart_data(multipart_parser* p, const char *at, size_t length) {
-    CHECK_ERR(length == 0, "multipart data is empty, len:%lu", length); 
+    if (length == 0) {
+        LOG_DEBUG("multipart data is empty, len:%lu", length);
+        return 0;
+    }
     
     Request *req = (Request *)multipart_parser_get_data(p);
     std::vector<FileItem> *items = req->get_body()->get_file_items();
