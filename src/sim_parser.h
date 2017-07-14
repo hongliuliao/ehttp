@@ -125,7 +125,7 @@ class FileItem {
         void set_is_file();
         void set_name(const std::string &name);
         void set_filename(const std::string &filename);
-        void set_data(const char *c, int len);
+        void append_data(const char *c, size_t len);
         void set_content_type(const char *c, int len);
         void set_parse_state(int state);
     private:

@@ -158,8 +158,8 @@ void FileItem::set_filename(const std::string &filename) {
     _filename = filename;    
 }
 
-void FileItem::set_data(const char *c, int len) {
-    _data.assign(c, len);    
+void FileItem::append_data(const char *c, size_t len) {
+    _data.append(c, len);    
 }
 
 void FileItem::set_content_type(const char *c, int len) {
@@ -454,21 +454,27 @@ int ss_on_multipart_value(multipart_parser* p, const char *at, size_t length) {
 }
 
 int ss_on_multipart_data(multipart_parser* p, const char *at, size_t length) {
-    std::string s;
-    s.assign(at, length);
-    if (s.empty()) {
-        LOG_DEBUG("multipart data is empty()");
-        return 0;
-    }
+    CHECK_ERR(length == 0, "multipart data is empty, len:%lu", length); 
+    
     Request *req = (Request *)multipart_parser_get_data(p);
     std::vector<FileItem> *items = req->get_body()->get_file_items();
     CHECK_ERR(items->empty(), "items is empty!, length:%lu", length); 
 
     FileItem &item = (*items)[items->size() - 1];
-    item.set_data(at, length);
-    item.set_parse_state(PARSE_MULTI_OVER); 
+    item.append_data(at, length);
 
-    LOG_DEBUG("get multipart_data:%s", s.c_str());
+    LOG_DEBUG("on multipart data for name:%s, len:%lu", 
+            item.get_fieldname()->c_str(), length);
+    return 0;
+}
+
+int ss_on_multipart_data_over(multipart_parser* p) {
+    Request *req = (Request *)multipart_parser_get_data(p);
+    std::vector<FileItem> *items = req->get_body()->get_file_items();
+    CHECK_ERR(items->empty(), "items is empty!, items size:%lu", items->size()); 
+    
+    FileItem &item = (*items)[items->size() - 1];
+    item.set_parse_state(PARSE_MULTI_OVER); 
     return 0;
 }
 
@@ -507,6 +513,7 @@ int ss_parse_multipart_data(Request *req) {
     mp_settings.on_header_field = ss_on_multipart_name;
     mp_settings.on_header_value = ss_on_multipart_value;
     mp_settings.on_part_data = ss_on_multipart_data;
+    mp_settings.on_part_data_end = ss_on_multipart_data_over;
     mp_settings.on_body_end = ss_on_multipart_body_end;
 
     multipart_parser* parser = multipart_parser_init(boundary.c_str(), &mp_settings);
