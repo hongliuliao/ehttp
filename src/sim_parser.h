@@ -98,7 +98,6 @@ class RequestLine {
          */
         int parse_request_url_params();
         
-        
         void set_method(std::string m);
         
         void set_request_url(std::string url);
@@ -116,11 +115,19 @@ class RequestLine {
 class FileItem {
     public:
         FileItem();
+        /**
+         * the item is file field or normal field 
+         **/
         bool is_file();
+        
         std::string *get_fieldname();
+        // get upload file name
         std::string *get_filename();
+        // get upload file content type
         std::string *get_content_type();
+        // get file data or field value
         std::string *get_data();
+
         bool get_parse_state();
         void set_is_file();
         void set_name(const std::string &name);

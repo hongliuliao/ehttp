@@ -34,6 +34,7 @@
 #include "simple_log.h"
 #include "http_server.h"
 
+// Make sure the callback method is threadsafe
 void login(Request &request, Json::Value &root) {
     std::string name = request.get_param("name");
     std::string pwd = request.get_param("pwd");
