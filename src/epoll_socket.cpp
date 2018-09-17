@@ -291,7 +291,7 @@ int EpollSocket::init_tp() {
     if (_thread_pool == NULL) {
         init_default_tp();
     }
-    int ret = _thread_pool->start();
+    int ret = _thread_pool->start_threadpool();
     return ret;
 }
 

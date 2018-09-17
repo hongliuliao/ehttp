@@ -77,11 +77,11 @@ int main(int argc, char **args) {
         return -1;
     }
 
-    //pthread_key_create(&g_tp_key,NULL);
-    //
-    //ThreadPool tp;
-    //tp.set_thread_start_cb(a_test_fn);
-    //tp.set_pool_size(4);
+    pthread_key_create(&g_tp_key,NULL);
+    
+    ThreadPool tp;
+    tp.set_thread_start_cb(a_test_fn);
+    tp.set_pool_size(4);
 
     HttpServer http_server;
     //http_server.set_thread_pool(&tp);

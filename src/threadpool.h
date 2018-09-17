@@ -65,7 +65,8 @@ class Task
         void* m_arg;
 };
 
-typedef void (*thread_start_callback)();
+typedef void (*ThreadStartCallback)();
+typedef void (*ThreadExitCallback)();
 
 class ThreadPool
 {
@@ -73,13 +74,16 @@ class ThreadPool
         ThreadPool();
         ~ThreadPool();
         int start();
+        int start_threadpool();
         int destroy_threadpool();
         void* execute_thread();
         int add_task(Task *task);
-        void set_thread_start_cb(thread_start_callback f);
+        void set_thread_start_cb(ThreadStartCallback f);
+        void set_thread_exit_cb(ThreadExitCallback f);
         void set_task_size_limit(int size);
         void set_pool_size(int pool_size);
-        thread_start_callback m_scb;
+        ThreadStartCallback m_scb;
+        ThreadExitCallback m_exit_cb;
     private:
         int m_pool_size;
         Mutex m_task_mutex;

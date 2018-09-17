@@ -8,6 +8,8 @@
 #include "http_parser.h"
 #include "simple_log.h"
 
+#include "gtest/gtest.h"
+
 const std::string test_req = "GET /hello?name=aaa&kw=%E4%B8%89%E6%98%8E HTTP/1.1\r\n" \
                              "Host: api.yeelink.net\r\n" \
                              "U-ApiKey: 121234132432143\r\n" \
@@ -21,37 +23,42 @@ const std::string TEST_POST_REQ = "POST /login?u=a HTTP/1.0\r\n" \
 
 const std::string TEST_POST_REQ1 = "POST /lo";
 const std::string TEST_POST_REQ2 = 
-                                   "Hgin TTP/1.0\r\nContent-Type: application/x-www-form-"
+                                   "Hgin HTTP/1.0\r\nContent-Type: application/x-www-form-"
                                    "urlencoded\r\n"
                                    "Content-Length: 14\r\n"
                                    "\r\n"
                                    "name=aa&pwd=xx";
 
-int test_get_unescape() {
+
+TEST(SimParserTest, test_get_unescape) {
     Request req;
     int ret = req.parse_request(test_req.c_str(), test_req.size());
     if (ret != 0) {
         LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, test_req.c_str());
-        return ret;
     }
-    std::string value = req.get_param("name");
-    LOG_INFO("Get 'name' param :%s", value.c_str());
-    LOG_INFO("Get 'kw' param :%s", req.get_unescape_param("kw").c_str());
-    return 0;
+    ASSERT_EQ(0, ret);
+
+    std::string name = req.get_param("name");
+    std::string kw = req.get_unescape_param("kw");
+    LOG_INFO("Get 'name' param :%s", name.c_str());
+    LOG_INFO("Get 'kw' param :%s", kw.c_str());
+    ASSERT_STREQ("aaa", name.c_str());
+    ASSERT_STREQ("三明", kw.c_str());
 }
 
-int test_parse_post() {
+TEST(SimParserTest, test_parse_post) {
     Request req;
     int ret = req.parse_request(TEST_POST_REQ.c_str(), TEST_POST_REQ.size());
     if (ret != 0) {
         LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_POST_REQ.c_str());
-        return ret;
     }
-    std::string value = req.get_param("name");
+    ASSERT_EQ(0, ret);
+    std::string name = req.get_param("name");
     std::string pwd = req.get_param("pwd");
-    LOG_INFO("Get 'name' param :%s", value.c_str());
+    LOG_INFO("Get 'name' param :%s", name.c_str());
     LOG_INFO("Get 'pwd' param :%s", pwd.c_str());
-    return 0;
+    ASSERT_STREQ("aa", name.c_str());
+    ASSERT_STREQ("xx", pwd.c_str());
 }
 
 int on_message_begin(http_parser *p) {
@@ -135,7 +142,7 @@ int test_http_parser() {
     return 0;
 }
 
-int test_http_parser2() {
+TEST(SimParserTest, test_http_parser_stream) {
     http_parser_settings settings;
     settings.on_message_begin = on_message_begin;
     settings.on_url = request_url_cb;
@@ -153,17 +160,21 @@ int test_http_parser2() {
     Request req;
     parser.data = &req;
 
-    int nparsed = http_parser_execute(&parser, &settings, TEST_POST_REQ1.c_str(), TEST_POST_REQ1.size());
+    size_t nparsed = http_parser_execute(&parser, &settings, TEST_POST_REQ1.c_str(), TEST_POST_REQ1.size());
     LOG_INFO("parsed size:%d, parser->upgrade:%d,total_size:%u", nparsed, parser.upgrade, TEST_POST_REQ1.size());
+    ASSERT_EQ(TEST_POST_REQ1.size(), nparsed);
     if (parser.http_errno) {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
+    ASSERT_EQ((unsigned int)0, parser.http_errno);
+
     nparsed = http_parser_execute(&parser, &settings, TEST_POST_REQ2.c_str(), TEST_POST_REQ2.size());
     LOG_INFO("parsed size:%d, parser->upgrade:%d,total_size:%u", nparsed, parser.upgrade, TEST_POST_REQ2.size());
+    ASSERT_EQ(TEST_POST_REQ2.size(), nparsed);
     if (parser.http_errno) {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
-    return 0;
+    ASSERT_EQ((unsigned int)0, parser.http_errno);
 }
 
 int test_http_parser_get() {
@@ -189,21 +200,4 @@ int test_http_parser_get() {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
     return 0;
-}
-
-int main () {
-    struct timeval start;
-    struct timeval end;
-    gettimeofday(&start, NULL);
-     
-    //test_get_unescape();
-    //test_parse_post();
-    test_http_parser();
-    //test_http_parser2();
-    //test_http_parser_get();
-
-    gettimeofday(&end, NULL);
-    int cost_time = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_usec - start.tv_usec);
-    LOG_INFO("COST TIME:%d us", cost_time);
-	return 0;
 }

@@ -21,13 +21,13 @@ void Task::run() {
 
 ThreadPool::ThreadPool() {
     m_scb = NULL;
+    m_exit_cb = NULL;
     m_task_size_limit = -1;
     m_pool_size = 0;
     m_pool_state = -1;
 }
 
-ThreadPool::~ThreadPool()
-{
+ThreadPool::~ThreadPool() {
     // Release resources
     if (m_pool_state != STOPPED) {
         destroy_threadpool();
@@ -37,9 +37,8 @@ ThreadPool::~ThreadPool()
 // We can't pass a member function to pthread_create.
 // So created the wrapper function that calls the member function
 // we want to run in the thread.
-    extern "C"
-void* ss_start_thread(void* arg)
-{
+extern "C"
+void* ss_start_thread(void* arg) {
     ThreadPool* tp = (ThreadPool *)arg;
     if (tp->m_scb != NULL) {
         tp->m_scb();
@@ -50,8 +49,12 @@ void* ss_start_thread(void* arg)
     return NULL;
 }
 
-int ThreadPool::start()
-{
+int ThreadPool::start() {
+    LOG_WARN("plz use start_threadpool method instead!");
+    return start_threadpool();
+}
+
+int ThreadPool::start_threadpool() {
     if (m_pool_size == 0) {
         LOG_ERROR("pool size must be set!");
         return -1;
@@ -76,8 +79,12 @@ int ThreadPool::start()
     return 0;
 }
 
-void ThreadPool::set_thread_start_cb(thread_start_callback f) {
+void ThreadPool::set_thread_start_cb(ThreadStartCallback f) {
     m_scb = f;
+}
+
+void ThreadPool::set_thread_exit_cb(ThreadExitCallback f) {
+    m_exit_cb = f;
 }
 
 void ThreadPool::set_task_size_limit(int size) {
@@ -88,8 +95,7 @@ void ThreadPool::set_pool_size(int pool_size) {
     m_pool_size = pool_size;
 }
 
-int ThreadPool::destroy_threadpool()
-{
+int ThreadPool::destroy_threadpool() {
     // Note: this is not for synchronization, its for thread communication!
     // destroy_threadpool() will only be called from the main thread, yet
     // the modified m_pool_state may not show up to other threads until its 
@@ -109,11 +115,10 @@ int ThreadPool::destroy_threadpool()
     }
     LOG_INFO("%d threads exited from the thread pool, task size:%u", 
             m_pool_size, m_tasks.size());
-    return 0;
+    return m_tasks.size();
 }
 
-void* ThreadPool::execute_thread()
-{
+void* ThreadPool::execute_thread() {
     Task *task;
     LOG_DEBUG("Starting thread :%u", pthread_self());
     while(true) {
@@ -139,6 +144,9 @@ void* ThreadPool::execute_thread()
         if (m_pool_state == STOPPED) {
             LOG_INFO("Unlocking and exiting: %u", pthread_self());
             m_task_mutex.unlock();
+            if (m_exit_cb != NULL) {
+                m_exit_cb();
+            }
             pthread_exit(NULL);
         }
 
@@ -156,8 +164,7 @@ void* ThreadPool::execute_thread()
     return NULL;
 }
 
-int ThreadPool::add_task(Task *task)
-{
+int ThreadPool::add_task(Task *task) {
     m_task_mutex.lock();
 
     if (m_task_size_limit > 0 && (int) m_tasks.size() > m_task_size_limit) {
