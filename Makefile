@@ -40,7 +40,7 @@ libsimpleserver.a: deps $(objects)
 	ar -rcs libsimpleserver.a src/*.o
 	mv libsimpleserver.a output/lib/
 
-test: http_server_test http_parser_test issue5_server
+test: libsimpleserver.a http_server_test http_parser_test issue5_server
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
@@ -54,7 +54,7 @@ threadpool_test: test/threadpool_test.cpp test-deps libsimpleserver.a
 http_multi_thread_demo: test/http_multi_thread_demo.cpp test-deps libsimpleserver.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
-http_parser_test: test/http_parser_test.cpp
+http_parser_test: test/http_parser_test.cpp test-deps
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
 
@@ -65,3 +65,4 @@ clean:
 	rm -rf src/*.o
 	rm -rf output/*
 	make -C deps/multipart-parser-c clean
+	make -C deps/googletest/googletest/make clean
