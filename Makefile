@@ -19,7 +19,7 @@ OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
 
 objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-all: deps libsimpleserver.a
+all: libsimpleserver.a
 
 prepare: 
 	mkdir -p output/include output/lib output/bin
@@ -28,7 +28,7 @@ prepare:
 tags:
 	ctags -R /usr/include src deps
 
-deps:
+deps: prepare 
 	make -C deps/http-parser package
 	make -C deps/json-cpp
 	make -C deps/multipart-parser-c
@@ -36,7 +36,7 @@ deps:
 test-deps:
 	make -C deps/googletest/googletest/make
 
-libsimpleserver.a: prepare $(objects)
+libsimpleserver.a: deps $(objects)
 	ar -rcs libsimpleserver.a src/*.o
 	mv libsimpleserver.a output/lib/
 
