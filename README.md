@@ -1,33 +1,33 @@
 # ehttp [![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
 
-此库是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口,和nginx等传统服务器相比,更加重视开发的便捷性,项目参考[restbed](https://bitbucket.org/Corvusoft/restbed/overview) 实现
+此库是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口
 
-## 特点
-* base on epoll
-* 强调简洁实用
-* 多线程模型
+## Feature
+* Base on linux epoll
+* Keep simple
+* Multi-thread model
 
-## 依赖
+## Depends
  * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) v0.6.0 json序列化组件
  * [http-parser](https://github.com/nodejs/http-parser) For parse http requset 
  * [multipart-parser-c](https://github.com/iafonov/multipart-parser-c) For parse multipart data
 
-## 性能(without log print)
+## Performance (without log print)
  * qps 12000+ (短连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
  * qps 18000+ (长连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
 
-## 构建 && 测试
+## Build && Test
 ```
  make && make test && ./output/bin/http_server_test 3456
  curl "localhost:3456/hello"
 ```
 
-## 功能列表
+## Function List
   * http 1.0/1.1(keep-alive 支持) GET/POST请求
   * 便捷的开发形式
   * Json格式的数据返回
 
-## 例子
+## Example
 ```c++
 #include <sstream>
 #include <cstdlib>
@@ -58,7 +58,7 @@ int main() {
 
 ```
 
-## 运行
+## Run
 ```
 liao@ubuntu:~/workspace/ehttp$ curl -d "name=tom&pwd=3" "localhost:3456/login"
 {"code":0,"msg":"login success!"}
