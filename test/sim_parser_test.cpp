@@ -31,6 +31,8 @@ const std::string TEST_POST_REQ2 =
 
 
 TEST(SimParserTest, test_get_unescape) {
+    set_log_level("WARN");
+
     Request req;
     int ret = req.parse_request(test_req.c_str(), test_req.size());
     if (ret != 0) {
@@ -47,6 +49,8 @@ TEST(SimParserTest, test_get_unescape) {
 }
 
 TEST(SimParserTest, test_parse_post) {
+    set_log_level("WARN");
+
     Request req;
     int ret = req.parse_request(TEST_POST_REQ.c_str(), TEST_POST_REQ.size());
     if (ret != 0) {
@@ -143,6 +147,8 @@ int test_http_parser() {
 }
 
 TEST(SimParserTest, test_http_parser_stream) {
+    set_log_level("WARN");
+
     http_parser_settings settings;
     settings.on_message_begin = on_message_begin;
     settings.on_url = request_url_cb;

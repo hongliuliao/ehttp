@@ -40,7 +40,7 @@ libsimpleserver.a: deps $(objects)
 	ar -rcs libsimpleserver.a src/*.o
 	mv libsimpleserver.a output/lib/
 
-test: libsimpleserver.a http_server_test http_parser_test issue5_server
+test: libsimpleserver.a http_server_test sim_parser_test issue5_server threadpool_test
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
@@ -57,7 +57,7 @@ http_multi_thread_demo: test/http_multi_thread_demo.cpp test-deps libsimpleserve
 http_multipart_demo: test/http_multipart_demo.cpp libsimpleserver.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
-http_parser_test: test/http_parser_test.cpp test-deps
+sim_parser_test: test/sim_parser_test.cpp test-deps
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
 

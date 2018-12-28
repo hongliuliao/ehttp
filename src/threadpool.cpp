@@ -29,7 +29,7 @@ ThreadPool::ThreadPool() {
 
 ThreadPool::~ThreadPool() {
     // Release resources
-    if (m_pool_state != STOPPED) {
+    if (m_pool_state == STARTED) {
         destroy_threadpool();
     }
 }

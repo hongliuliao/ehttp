@@ -1,6 +1,7 @@
 output
 log
 tags
+deps/googletest/googletest/make/sample1_unittest
 
 # Compiled Object files
 *.slo

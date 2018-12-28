@@ -44,3 +44,8 @@ TEST(ThreadPoolTest, test_tp_cb) {
     ASSERT_EQ(0, ret);
 }
 
+TEST(ThreadPoolTest, test_tp_exit) {
+    // add a thread pool not init
+    ThreadPool tp2;
+}
+
