@@ -60,7 +60,7 @@ enum EpollSocketStatus {
 
 class EpollSocket {
     private:
-        int setNonblocking(int fd);
+        int set_nonblocking(int fd);
 
         int accept_socket(int sockfd, std::string &client_ip);
 

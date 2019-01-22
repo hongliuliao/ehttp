@@ -36,7 +36,7 @@ EpollSocket::~EpollSocket() {
     }
 }
 
-int EpollSocket::setNonblocking(int fd) {
+int EpollSocket::set_nonblocking(int fd) {
     int flags;
 
     if (-1 == (flags = fcntl(fd, F_GETFL, 0)))
@@ -117,7 +117,7 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     if (conn_sock == -1) {
         return -1;
     }
-    setNonblocking(conn_sock);
+    set_nonblocking(conn_sock);
 
     pthread_mutex_lock(&_client_lock);
     _clients++;
@@ -136,7 +136,7 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
 
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, conn_sock, &conn_sock_ev) == -1) {
         LOG_ERROR("epoll_ctl: conn_sock:%s", strerror(errno));
-        close_and_release(event);
+        close_and_release(conn_sock_ev);
         return -1;
     }
     return 0;
