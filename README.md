@@ -1,10 +1,9 @@
 # ehttp [![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
 
-此库是为了使用c++方便快速的构建http server,编写基于http协议json格式的接口
+此库是为了使用c++简洁高效的构建http (json数据交互格式) 微服务
 
 ## Feature
 * Base on linux epoll
-* Keep simple
 * Multi-thread model
 
 ## Depends
@@ -24,7 +23,6 @@
 
 ## Function List
   * http 1.0/1.1(keep-alive 支持) GET/POST请求
-  * 便捷的开发形式
   * Json格式的数据返回
 
 ## Example
