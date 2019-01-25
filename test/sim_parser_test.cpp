@@ -21,6 +21,12 @@ const std::string TEST_POST_REQ = "POST /login?u=a HTTP/1.0\r\n" \
                                   "\r\n" \
                                   "name=aa&pwd=xx";
 
+const std::string TEST_POST_REQ_LOW_LEN = "POST /login?u=a HTTP/1.0\r\n" \
+                                  "Content-Type: application/x-www-form-urlencoded\r\n" \
+                                  "Content-length: 14\r\n" \
+                                  "\r\n" \
+                                  "name=aa&pwd=xx";
+
 const std::string TEST_POST_REQ1 = "POST /lo";
 const std::string TEST_POST_REQ2 = 
                                    "Hgin HTTP/1.0\r\nContent-Type: application/x-www-form-"
@@ -183,15 +189,15 @@ TEST(SimParserTest, test_http_parser_stream) {
     ASSERT_EQ((unsigned int)0, parser.http_errno);
 }
 
-int test_http_parser_get() {
+TEST(SimParserTest, test_http_parser_post) {
     http_parser_settings settings;
     settings.on_message_begin = NULL;
     settings.on_url = request_url_cb;
     settings.on_status = on_status;
-    settings.on_header_field = header_field_cb;
-    settings.on_header_value = header_value_cb;
-    settings.on_headers_complete = on_headers_complete;
-    settings.on_body = on_body;
+    settings.on_header_field = ss_on_header_field;
+    settings.on_header_value = ss_on_header_value;
+    settings.on_headers_complete = ss_on_headers_complete;
+    settings.on_body = ss_on_body;
     settings.on_message_complete = on_message_complete;
     settings.on_chunk_header = NULL;
     settings.on_chunk_complete = NULL;
@@ -200,10 +206,12 @@ int test_http_parser_get() {
     http_parser_init(&parser, HTTP_REQUEST);
     Request req;
     parser.data = &req;
-    int nparsed = http_parser_execute(&parser, &settings, test_req.c_str(), test_req.size());
-    LOG_INFO("parsed size:%d, parser->upgrade:%d,total_size:%u", nparsed, parser.upgrade, test_req.size());
+    int nparsed = http_parser_execute(&parser, &settings, 
+            TEST_POST_REQ_LOW_LEN.c_str(), TEST_POST_REQ_LOW_LEN.size());
+    LOG_INFO("parsed size:%d, parser->upgrade:%d,total_size:%u", 
+            nparsed, parser.upgrade, test_req.size());
     if (parser.http_errno) {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
-    return 0;
+    ASSERT_EQ(0, (int)parser.http_errno);
 }

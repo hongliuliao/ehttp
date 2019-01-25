@@ -42,6 +42,11 @@ const static int PARSE_MULTI_OVER = 3;
 const static int NEED_MORE_STATUS = 1;
 const static int PARSE_LEN_REQUIRED = 2;
 
+int ss_on_header_field(http_parser *p, const char *buf, size_t len);
+int ss_on_header_value(http_parser *p, const char *buf, size_t len);
+int ss_on_headers_complete(http_parser *p);
+int ss_on_body(http_parser *p, const char *buf, size_t len);
+
 class RequestParam {
     public:
 

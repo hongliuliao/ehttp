@@ -10,6 +10,7 @@
 #include "simple_log.h"
 #include "sim_parser.h"
 #include "http_parser.h"
+#include "string_utils.h"
 #include "multipart_parser.h"
 
 #define MAX_REQ_SIZE 10485760
@@ -261,10 +262,12 @@ void Request::get_params(std::string &name, std::vector<std::string> &params) {
 }
 
 void Request::add_header(std::string &name, std::string &value) {
+    ss_str_tolower(name); // field is case-insensitive
     this->_headers[name] = value;
 }
 
 std::string Request::get_header(std::string name) {
+    ss_str_tolower(name); // field is case-insensitive
     return this->_headers[name];
 }
 
@@ -308,7 +311,7 @@ int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
 
     std::string field;
     field.assign(buf, len);
-    if (req->_last_was_value) {
+    if (req->_last_was_value) { 
         req->_header_fields.push_back(field);
         req->_last_was_value = false;
     } else {
@@ -348,6 +351,7 @@ int ss_on_headers_complete(http_parser *p) {
             req->_header_fields.size(), req->_header_values.size());
     if (req->get_method() == "POST" && req->get_header("Content-Length").empty()) {
         req->_parse_err = PARSE_LEN_REQUIRED;
+        LOG_ERROR("parse req error, Content-Length not found");
         return -1;
     }
     return 0;
@@ -358,19 +362,6 @@ int ss_on_body(http_parser *p, const char *buf, size_t len) {
     req->get_body()->get_raw_string()->append(buf, len);
     req->_parse_part = PARSE_REQ_BODY;
     LOG_DEBUG("GET body len:%d", len);
-    return 0;
-}
-
-int ss_split_str(const std::string &input, const char s, std::vector<std::string> &tokens) {
-    if (input.empty()) {
-        return 0;
-    }
-    std::stringstream ss;
-    ss << input;
-    std::string token;
-    while (std::getline(ss, token, s)) {
-        tokens.push_back(token);
-    }
     return 0;
 }
 
