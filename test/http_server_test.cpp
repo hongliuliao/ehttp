@@ -63,6 +63,7 @@ void usleep(Request &request, Response &response) {
     usleep(atoi(sleep_time.c_str()));
     root["code"] = 0;
     root["msg"] = "success!";
+    response.set_head("Cache-Control", "max-age=0, private, must-revalidate");
     response.set_body(root);
 }
 
