@@ -43,6 +43,19 @@ std::set<std::string> *HttpMethod::get_names() {
     return &_names;
 }
 
+std::string HttpMethod::get_names_str() {
+    std::stringstream ss;
+    size_t i = 0;
+    for (std::set<std::string>::iterator it = _names.begin(); it != _names.end(); ++it) {
+        ss << *it;
+        if (i != _names.size() - 1) {
+            ss << ", ";
+        }
+        i++;
+    }
+    return ss.str();
+}
+
 HttpServer::HttpServer() {
     _port = 3456; // default port 
     _backlog = 10;
@@ -148,11 +161,11 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     HttpMethod method = resource.method;
     if (method.get_names()->count(req._line.get_method()) == 0) {
         res._code_msg = STATUS_METHOD_NOT_ALLOWED;
-        std::string allow_name = *(method.get_names()->begin()); 
-        res.set_head("Allow", allow_name);
+        std::string allow_names = method.get_names_str(); 
+        res.set_head("Allow", allow_names);
         res._body.clear();
         LOG_INFO("not allow method, allowed:%s, request method:%s", 
-            allow_name.c_str(), req._line.get_method().c_str());
+            allow_names.c_str(), req._line.get_method().c_str());
         return 0;
     }
 

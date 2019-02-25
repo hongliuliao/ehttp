@@ -67,6 +67,13 @@ void usleep(Request &request, Response &response) {
     response.set_body(root);
 }
 
+void options_test(Request &request, Response &response) {
+    response.set_head("Cache-Control", "max-age=0, private, must-revalidate");
+    response.set_head("Allow", "GET, OPTIONS");
+    response.set_head("Content-Length", "0");
+    response.set_head("Access-Control-Allow-Methods", "GET, OPTIONS");
+}
+
 int main(int argc, char **args) {
     int ret = log_init("./conf", "simple_log.conf");
     if (ret != 0) {
@@ -88,6 +95,7 @@ int main(int argc, char **args) {
     //http_server.set_thread_pool(&tp);
 
     http_server.add_mapping("/hello", hello);
+    http_server.add_mapping("/options_test", options_test, GET_METHOD | OPTIONS_METHOD);
     http_server.add_mapping("/usleep", usleep);
     http_server.add_mapping("/sayhello", sayhello);
     http_server.add_mapping("/login", login, GET_METHOD | POST_METHOD);

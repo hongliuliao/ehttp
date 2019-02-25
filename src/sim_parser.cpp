@@ -290,12 +290,7 @@ int ss_on_url(http_parser *p, const char *buf, size_t len) {
 int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
     Request *req = (Request *) p->data;
     if (req->_parse_part == PARSE_REQ_LINE) {
-        if (p->method == 1) {
-            req->_line.set_method("GET");
-        }
-        if (p->method == 3) {
-            req->_line.set_method("POST");
-        }
+        req->_line.set_method(http_method_str((enum http_method)p->method));
         int ret = req->_line.parse_request_url_params();
         if (ret != 0) {
             return ret; 

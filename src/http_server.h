@@ -23,6 +23,10 @@ public:
     HttpMethod& operator|(HttpMethod hm);
     std::set<int> *get_codes();
     std::set<std::string> *get_names();
+    /**
+     * the names like "GET, POST"
+     */
+    std::string get_names_str();
 private:
     std::set<int> _codes;
     std::set<std::string> _names;
@@ -30,6 +34,7 @@ private:
 
 static HttpMethod GET_METHOD = HttpMethod(1, "GET");
 static HttpMethod POST_METHOD = HttpMethod(2, "POST");
+static HttpMethod OPTIONS_METHOD = HttpMethod(3, "OPTIONS");
 
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
