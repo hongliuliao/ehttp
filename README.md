@@ -6,11 +6,6 @@
 * Base on linux epoll
 * Multi-thread model
 
-## Depends
- * [jsoncpp](https://github.com/open-source-parsers/jsoncpp) v0.6.0 json序列化组件
- * [http-parser](https://github.com/nodejs/http-parser) For parse http requset 
- * [multipart-parser-c](https://github.com/iafonov/multipart-parser-c) For parse multipart data
-
 ## Performance (without log print)
  * qps 12000+ (短连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
  * qps 18000+ (长连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
@@ -52,14 +47,11 @@ int main() {
     http_server.start_sync();
     return 0;
 }
-
-
 ```
 
 ## Run
 ```
 liao@ubuntu:~/workspace/ehttp$ curl -d "name=tom&pwd=3" "localhost:3456/login"
 {"code":0,"msg":"login success!"}
-
 ```
 
