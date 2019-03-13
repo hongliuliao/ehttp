@@ -249,7 +249,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
     // 2. write bytes to socket
     int nwrite = send(fd, buffer, read_size, 0);
     if (nwrite < 0) {
-        perror("send fail!");
+        LOG_ERROR("send fail, err:%s", strerror(errno));
         return WRITE_CONN_CLOSE;
     }
     // 3. when not write all buffer, we will rollback write index
