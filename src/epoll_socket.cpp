@@ -16,6 +16,7 @@
 #include <sys/fcntl.h>
 #include <sys/sysinfo.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "simple_log.h"
 #include "epoll_socket.h"
