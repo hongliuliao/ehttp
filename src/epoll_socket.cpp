@@ -320,6 +320,9 @@ int EpollSocket::start_event_loop() {
 }
 
 int EpollSocket::start_epoll() {
+    /* Ignore broken pipe signal. */
+    signal(SIGPIPE, SIG_IGN);
+
     int ret = init_tp();
     CHECK_RET(ret, "thread pool start error:%d", ret);
 
