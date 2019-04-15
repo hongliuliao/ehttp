@@ -3,7 +3,7 @@ compiler:
 - g++
 os:
 - linux
-script: make && make test && chmod +x ./run_ut.sh && ./run_ut.sh
+script: make COV=1 && make test COV=1 && chmod +x ./run_ut.sh && ./run_ut.sh
 env:
   global:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
