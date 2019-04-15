@@ -1,4 +1,8 @@
-# ehttp [![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
+# ehttp 
+[![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
+<a href="https://scan.coverity.com/projects/hongliuliao-ehttp">
+  <img alt="Coverity Scan Build Status" src="https://scan.coverity.com/projects/18175/badge.svg"/>
+</a>
 
 此库是为了使用c++简洁高效的构建http (json数据交互格式) 微服务
 
