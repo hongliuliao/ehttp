@@ -4,6 +4,11 @@ CXX=g++
 CXXFLAGS += -g -Wall
 LDFLAGS += -pthread
 
+ifdef COV
+	CXXFLAGS += -fprofile-arcs -ftest-coverage
+	LDFLAGS += -lgcov --coverage
+endif
+
 MULTIPART_PARSER_INC_PATH=-I deps/multipart-parser-c/
 MULTIPART_PARSER_LIB_PATH=deps/multipart-parser-c/multipart_parser.o
 
@@ -60,12 +65,15 @@ http_multipart_demo: test/http_multipart_demo.cpp libsimpleserver.a
 sim_parser_test: test/sim_parser_test.cpp test-deps
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
-
 issue5_server: test/issue5/issue5_server.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
 clean:
+	rm -rf *.gcda
+	rm -rf *.gcno
 	rm -rf src/*.o
+	rm -rf src/*.gcda
+	rm -rf src/*.gcno
 	rm -rf output/*
 	make -C deps/multipart-parser-c clean
 	make -C deps/googletest/googletest/make clean
