@@ -38,7 +38,7 @@ TEST(ThreadPoolTest, test_tp_cb) {
     int ret = tp.start_threadpool();
     ASSERT_EQ(0, ret);
 
-    sleep(1); // sleep a moment to make sure all threads start
+    usleep(3000); // sleep 3ms to make sure all threads start
 
     ret = tp.destroy_threadpool(); 
     ASSERT_EQ(0, ret);
