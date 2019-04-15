@@ -31,3 +31,5 @@ deps/googletest/googletest/make/sample1_unittest
 *.exe
 *.out
 *.app
+*.gcno
+*.gcda

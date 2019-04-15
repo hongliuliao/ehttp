@@ -4,7 +4,7 @@ CXX=g++
 CXXFLAGS += -g -Wall
 LDFLAGS += -pthread
 
-ifdef COV
+ifdef ACOV
 	CXXFLAGS += -fprofile-arcs -ftest-coverage
 	LDFLAGS += -lgcov --coverage
 endif
