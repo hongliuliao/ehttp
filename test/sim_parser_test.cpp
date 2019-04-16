@@ -245,3 +245,24 @@ TEST(SimParserTest, test_parse_multipart_req) {
     ASSERT_EQ(2, (int)items->size());
 }
 
+TEST(SimParserTest, test_gen_response) {
+    CodeMsg cm = {0, "OK"};
+    Response rsp(cm);
+    rsp.set_head("Allow", "GET");
+    Json::Value root;
+    root["code"] = 0;
+    rsp.set_body(root);
+    int ret = rsp.gen_response("HTTP/1.0", false);
+    ASSERT_EQ(0, ret);
+    char buf[1024];
+    int read_size;
+    ret = rsp.readsome(buf, sizeof(buf), read_size);
+    ASSERT_EQ(0, ret); // read eof
+    ret = rsp.rollback(10); // rollback a little
+    ASSERT_EQ(0, ret);
+    int except_size = 5;
+    ret = rsp.readsome(buf, except_size, read_size); // read a little which not reach eof
+    ASSERT_EQ(NEED_MORE_STATUS, ret);
+    ASSERT_EQ(except_size, read_size);
+}
+

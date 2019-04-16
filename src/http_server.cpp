@@ -258,7 +258,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
     }
     LOG_DEBUG("send complete which write_num:%d, read_size:%d", nwrite, read_size);
 
-    if (ret == 1) {/* not send over*/
+    if (ret == NEED_MORE_STATUS) {/* not send over*/
         LOG_DEBUG("has big response, we will send part first and send other part later ...");
         return WRITE_CONN_CONTINUE;
     }

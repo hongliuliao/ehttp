@@ -628,7 +628,7 @@ void Response::set_body(Json::Value &body) {
     this->_body = str_value;
 }
 
-int Response::gen_response(std::string &http_version, bool is_keepalive) {
+int Response::gen_response(const std::string &http_version, bool is_keepalive) {
     LOG_DEBUG("START gen_response code:%d, msg:%s", _code_msg.status_code, _code_msg.msg.c_str());
     _res_bytes << http_version << " " << _code_msg.status_code << " " << _code_msg.msg << "\r\n";
     _res_bytes << "Server: ehttp/" << EHTTP_VERSION << "\r\n";
@@ -661,7 +661,7 @@ int Response::readsome(char *buffer, int buffer_size, int &read_size) {
     read_size = _res_bytes.gcount();
 
     if (!_res_bytes.eof()) {
-        return 1;
+        return NEED_MORE_STATUS;
     }
     return 0;
 }

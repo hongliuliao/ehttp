@@ -246,7 +246,7 @@ class Response {
 
         void set_body(Json::Value &body);
 
-        int gen_response(std::string &http_version, bool is_keepalive);
+        int gen_response(const std::string &http_version, bool is_keepalive);
 
         /**
          * return 0: read part, 1: read over, -1:read error
