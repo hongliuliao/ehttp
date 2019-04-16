@@ -697,13 +697,18 @@ int HttpContext::get_cost_time() {
     return cost_time;
 }
 
-void HttpContext::print_access_log(std::string &client_ip) {
+int HttpContext::print_access_log(const std::string &client_ip) {
     std::string http_method = this->_req->_line.get_method();
     std::string request_url = this->_req->_line.get_request_url();
+    if (http_method.empty() || request_url.empty()) {
+        LOG_ERROR("http method or request url is empty!");
+        return -1;
+    }
     int cost_time = get_cost_time();
     LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
             http_method.c_str(), request_url.c_str(), _res->_code_msg.status_code,
             cost_time, _res->_body.size(), client_ip.c_str());
+    return 0;
 }
 
 inline void HttpContext::delete_req_res() {

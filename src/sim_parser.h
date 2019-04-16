@@ -240,7 +240,7 @@ class Request {
 class Response {
     public:
         Response(CodeMsg status_code = STATUS_OK);
-        Response(CodeMsg status_code, Json::Value &body);
+        //Response(CodeMsg status_code, Json::Value &body);
 
         void set_head(const std::string &name, const std::string &value);
 
@@ -276,7 +276,7 @@ class HttpContext {
 
         int get_cost_time();
 
-        void print_access_log(std::string &client_ip);
+        int print_access_log(const std::string &client_ip);
 
         inline void delete_req_res();
 

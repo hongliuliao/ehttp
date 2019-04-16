@@ -51,7 +51,7 @@ const std::string TEST_MULTIPART = "POST /login HTTP/1.0\r\n" \
                                   "\r\n" \
                                   "------WebKitFormBoundaryrGKCBY7qhFd3TrwA--";
 
-TEST(SimParserTest, test_get_unescape) {
+TEST(RequestTest, test_get_unescape) {
     set_log_level("WARN");
 
     Request req;
@@ -74,7 +74,7 @@ TEST(SimParserTest, test_get_unescape) {
     ASSERT_EQ("/hello", uri);
 }
 
-TEST(SimParserTest, test_parse_post) {
+TEST(RequestTest, test_parse_post) {
     set_log_level("WARN");
 
     Request req;
@@ -172,7 +172,7 @@ int test_http_parser() {
     return 0;
 }
 
-TEST(SimParserTest, test_http_parser_stream) {
+TEST(RequestTest, test_http_parser_stream) {
     set_log_level("WARN");
 
     http_parser_settings settings;
@@ -209,7 +209,7 @@ TEST(SimParserTest, test_http_parser_stream) {
     ASSERT_EQ((unsigned int)0, parser.http_errno);
 }
 
-TEST(SimParserTest, test_http_parser_post) {
+TEST(RequestTest, test_http_parser_post) {
     http_parser_settings settings;
     settings.on_message_begin = NULL;
     settings.on_url = request_url_cb;
@@ -236,8 +236,8 @@ TEST(SimParserTest, test_http_parser_post) {
     ASSERT_EQ(0, (int)parser.http_errno);
 }
 
-TEST(SimParserTest, test_parse_multipart_req) {
-    //set_log_level("LOG_DEBUG");
+TEST(RequestTest, test_parse_multipart_req) {
+    //set_log_level("DEBUG");
     Request req;
     int ret = req.parse_request(TEST_MULTIPART.c_str(), (int)TEST_MULTIPART.size());
     ASSERT_EQ(0, ret);
@@ -245,7 +245,7 @@ TEST(SimParserTest, test_parse_multipart_req) {
     ASSERT_EQ(2, (int)items->size());
 }
 
-TEST(SimParserTest, test_gen_response) {
+TEST(ResponseTest, test_gen_response) {
     CodeMsg cm = {0, "OK"};
     Response rsp(cm);
     rsp.set_head("Allow", "GET");
@@ -264,5 +264,16 @@ TEST(SimParserTest, test_gen_response) {
     ret = rsp.readsome(buf, except_size, read_size); // read a little which not reach eof
     ASSERT_EQ(NEED_MORE_STATUS, ret);
     ASSERT_EQ(except_size, read_size);
+}
+
+TEST(HttpContextTest, test_print_access_log) {
+    //set_log_level("INFO");
+    HttpContext hc(0); // use stdin fd
+    int ret = hc.get_request().parse_request(TEST_GET_REQ.c_str(), TEST_GET_REQ.size());
+    ASSERT_EQ(0, ret);
+    ret = hc.get_res().gen_response("HTTP/1.0", false);
+    ASSERT_EQ(0, ret);
+    ret = hc.print_access_log("127.0.0.1");
+    ASSERT_EQ(0, ret);
 }
 
