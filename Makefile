@@ -45,7 +45,7 @@ libsimpleserver.a: deps $(objects)
 	ar -rcs libsimpleserver.a src/*.o
 	mv libsimpleserver.a output/lib/
 
-test: libsimpleserver.a http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test
+test: libsimpleserver.a http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test simple_log_test
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
@@ -69,6 +69,9 @@ string_utils_test: test/string_utils_test.cpp test-deps
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
 simple_config_test: test/simple_config_test.cpp test-deps
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
+
+simple_log_test: test/simple_log_test.cpp test-deps
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
 issue5_server: test/issue5/issue5_server.cpp
