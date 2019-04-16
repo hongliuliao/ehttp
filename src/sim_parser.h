@@ -41,6 +41,7 @@ const static int PARSE_MULTI_OVER = 3;
 
 const static int NEED_MORE_STATUS = 1;
 const static int PARSE_LEN_REQUIRED = 2;
+const static int PARSE_MULTIPART_ERR = -3;
 
 int ss_on_header_field(http_parser *p, const char *buf, size_t len);
 int ss_on_header_value(http_parser *p, const char *buf, size_t len);
@@ -60,7 +61,7 @@ class RequestParam {
          * get params by name
          * when params in url like age=1&age=2, it will return [1, 2]
          */
-        void get_params(std::string &name, std::vector<std::string> &params);
+        void get_params(const std::string &name, std::vector<std::string> &params);
 
         /**
          * query_url : name=tom&age=3
@@ -161,7 +162,7 @@ class RequestBody {
          */
         std::string get_param(std::string name);
 
-        void get_params(std::string &name, std::vector<std::string> &params);
+        void get_params(const std::string &name, std::vector<std::string> &params);
 
         /**
          * get request body bytes
@@ -193,7 +194,7 @@ class Request {
          */
         std::string get_unescape_param(std::string name);
 
-        void get_params(std::string &name, std::vector<std::string> &params);
+        void get_params(const std::string &name, std::vector<std::string> &params);
 
         std::string get_header(std::string name);
 

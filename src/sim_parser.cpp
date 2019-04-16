@@ -24,7 +24,7 @@ std::string RequestParam::get_param(std::string &name) {
     return i->second;
 }
 
-void RequestParam::get_params(std::string &name, std::vector<std::string> &params) {
+void RequestParam::get_params(const std::string &name, std::vector<std::string> &params) {
     std::pair<std::multimap<std::string, std::string>::iterator, std::multimap<std::string, std::string>::iterator> ret = this->_params.equal_range(name);
     for (std::multimap<std::string, std::string>::iterator it=ret.first; it!=ret.second; ++it) {
         params.push_back(it->second);
@@ -179,7 +179,7 @@ std::string RequestBody::get_param(std::string name) {
     return _req_params.get_param(name);
 }
 
-void RequestBody::get_params(std::string &name, std::vector<std::string> &params) {
+void RequestBody::get_params(const std::string &name, std::vector<std::string> &params) {
     return _req_params.get_params(name, params);
 }
 
@@ -252,7 +252,7 @@ std::string Request::get_unescape_param(std::string name) {
     return unescape_param;
 }
 
-void Request::get_params(std::string &name, std::vector<std::string> &params) {
+void Request::get_params(const std::string &name, std::vector<std::string> &params) {
     if (_line.get_method() == "GET") {
         _line.get_request_param().get_params(name, params);
     }
@@ -513,15 +513,17 @@ int ss_parse_multipart_data(Request *req) {
     multipart_parser* parser = multipart_parser_init(boundary.c_str(), &mp_settings);
     multipart_parser_set_data(parser, req);
     size_t parsed = multipart_parser_execute(parser, body->c_str(), body->size());
+    int parse_ret = 0;
     if (parsed != body->size()) {
         LOG_WARN("parse multipart data err, parsed:%lu, total:%lu, url:%s", 
                 parsed, body->size(), req->get_request_url().c_str());
+        parse_ret = -1;
     }
     LOG_DEBUG("multipart_parser_execute, parsed:%lu, total:%lu", 
                 parsed, body->size());
     multipart_parser_free(parser);
 
-    return 0;
+    return parse_ret;
 }
 
 int ss_on_message_complete(http_parser *p) {
@@ -534,13 +536,17 @@ int ss_on_message_complete(http_parser *p) {
             req->get_body()->get_req_params()->parse_query_url(*raw_str);
         }
     }
+    int parse_ret = 0;
     if (ct_header.find("multipart/form-data") != std::string::npos) {
         LOG_DEBUG("start parse multipart data! content type:%s", ct_header.c_str());
-        ss_parse_multipart_data(req);
+        parse_ret = ss_parse_multipart_data(req);
+        if (parse_ret != 0) {
+            req->_parse_err = PARSE_MULTIPART_ERR;
+        }
     }
     req->_parse_part = PARSE_REQ_OVER;
-    LOG_DEBUG("msg COMPLETE!");
-    return 0;
+    LOG_DEBUG("msg COMPLETE! parse_err:%d", req->_parse_err);
+    return parse_ret;
 }
 
 Request::Request() {
@@ -567,7 +573,7 @@ Request::~Request() {}
 int Request::parse_request(const char *read_buffer, int read_size) {
     _total_req_size += read_size;
     if (_total_req_size > MAX_REQ_SIZE) {
-        LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT!");
+        LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT! MAX_REQ_SIZE:%d", MAX_REQ_SIZE);
         return -1;
     }
     LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
@@ -577,7 +583,8 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         if (_parser.http_errno) {
             err_msg = http_errno_description(HTTP_PARSER_ERRNO(&_parser));
         }
-        LOG_ERROR("parse request error! msg:%s", err_msg.c_str());
+        LOG_ERROR("parse request error, nparsed:%jd, input size:%d! msg:%s", 
+                nparsed, read_size, err_msg.c_str());
         return -1;
     }
 

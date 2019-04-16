@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-const std::string test_req = "GET /hello?name=aaa&kw=%E4%B8%89%E6%98%8E HTTP/1.1\r\n" \
+const std::string TEST_GET_REQ = "GET /hello?name=aaa&kw=%E4%B8%89%E6%98%8E HTTP/1.1\r\n" \
                              "Host: api.yeelink.net\r\n" \
                              "U-ApiKey: 121234132432143\r\n" \
                              "\r\n";
@@ -35,14 +35,29 @@ const std::string TEST_POST_REQ2 =
                                    "\r\n"
                                    "name=aa&pwd=xx";
 
+const std::string TEST_MULTIPART = "POST /login HTTP/1.0\r\n" \
+                                  "Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryrGKCBY7qhFd3TrwA\r\n" \
+                                  "Content-length: 323\r\n" \
+                                  "\r\n" \
+                                  "------WebKitFormBoundaryrGKCBY7qhFd3TrwA\r\n" \
+                                  "Content-Disposition: form-data; name=\"user_name\"\r\n"
+                                  "\r\n" \
+                                  "title\r\n" \
+                                  "------WebKitFormBoundaryrGKCBY7qhFd3TrwA\r\n" \
+                                  "Content-Disposition: form-data; name=\"user_photo\"; filename=\"chrome.png\"\r\n" \
+                                  "Content-Type: image/png\r\n" \
+                                  "\r\n" \
+                                  "PNG ... content of chrome.png ...\r\n" \
+                                  "\r\n" \
+                                  "------WebKitFormBoundaryrGKCBY7qhFd3TrwA--";
 
 TEST(SimParserTest, test_get_unescape) {
     set_log_level("WARN");
 
     Request req;
-    int ret = req.parse_request(test_req.c_str(), test_req.size());
+    int ret = req.parse_request(TEST_GET_REQ.c_str(), TEST_GET_REQ.size());
     if (ret != 0) {
-        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, test_req.c_str());
+        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_GET_REQ.c_str());
     }
     ASSERT_EQ(0, ret);
 
@@ -52,6 +67,11 @@ TEST(SimParserTest, test_get_unescape) {
     LOG_INFO("Get 'kw' param :%s", kw.c_str());
     ASSERT_STREQ("aaa", name.c_str());
     ASSERT_STREQ("三明", kw.c_str());
+    std::vector<std::string> params;
+    req.get_params("name", params);
+    ASSERT_EQ(1, (int) params.size());
+    std::string uri = req.get_request_uri();
+    ASSERT_EQ("/hello", uri);
 }
 
 TEST(SimParserTest, test_parse_post) {
@@ -209,9 +229,19 @@ TEST(SimParserTest, test_http_parser_post) {
     int nparsed = http_parser_execute(&parser, &settings, 
             TEST_POST_REQ_LOW_LEN.c_str(), TEST_POST_REQ_LOW_LEN.size());
     LOG_INFO("parsed size:%d, parser->upgrade:%d,total_size:%u", 
-            nparsed, parser.upgrade, test_req.size());
+            nparsed, parser.upgrade, TEST_POST_REQ_LOW_LEN.size());
     if (parser.http_errno) {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
     ASSERT_EQ(0, (int)parser.http_errno);
 }
+
+TEST(SimParserTest, test_parse_multipart_req) {
+    //set_log_level("LOG_DEBUG");
+    Request req;
+    int ret = req.parse_request(TEST_MULTIPART.c_str(), (int)TEST_MULTIPART.size());
+    ASSERT_EQ(0, ret);
+    std::vector<FileItem> *items = req.get_body()->get_file_items();
+    ASSERT_EQ(2, (int)items->size());
+}
+
