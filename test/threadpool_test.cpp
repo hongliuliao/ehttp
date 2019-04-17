@@ -49,3 +49,23 @@ TEST(ThreadPoolTest, test_tp_exit) {
     ThreadPool tp2;
 }
 
+void test_task_func(void* /*arg*/) {
+    LOG_INFO("run task func");
+}
+
+TEST(ThreadPoolTest, test_run_thread) {
+    ThreadPool tp;
+    tp.set_task_size_limit(1);
+    tp.set_pool_size(1);
+    int ret = tp.start_threadpool();
+    ASSERT_EQ(0, ret);
+
+    Task *t = new Task(&test_task_func, NULL);
+    ret = tp.add_task(t);
+    ASSERT_EQ(0, ret);
+
+    usleep(3000); // sleep 3ms to make sure thread start
+    ret = tp.destroy_threadpool(); 
+    ASSERT_EQ(0, ret);
+}
+
