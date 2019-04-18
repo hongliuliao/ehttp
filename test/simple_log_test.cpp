@@ -10,3 +10,19 @@ TEST(SimpleLogTest, test_log) {
     LOG_WARN("this is a warn log");
     LOG_ERROR("this is a error log");
 }
+
+TEST(FileAppendeTest, test_shift_file_if_need) {
+    FileAppender appender;
+    int ret = appender.init("./log", "ehttp.log");
+    ASSERT_EQ(0, ret);
+
+    struct timeval now;
+    struct timezone tz;
+    gettimeofday(&now, &tz);
+    ret = appender.shift_file_if_need(now, tz);
+    ASSERT_EQ(0, ret);
+
+    now.tv_sec = now.tv_sec + 3600 * 24 + 1; // tomorrow
+    ret = appender.shift_file_if_need(now, tz);
+    ASSERT_EQ(1, ret);
+}
