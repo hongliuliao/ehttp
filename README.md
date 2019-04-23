@@ -2,15 +2,15 @@
 [![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
 [![codecov.io](http://codecov.io/github/hongliuliao/ehttp/coverage.svg?branch=master)](http://codecov.io/github/hongliuliao/ehttp?branch=master)
 
-此库是为了使用c++简洁高效的构建http (json数据交互格式) 微服务
+This library make http (with json) microservice easy!
 
 ## Feature
 * Base on linux epoll
 * Multi-thread model
 
 ## Performance (without log print)
- * qps 12000+ (短连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
- * qps 18000+ (长连接 [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
+ * qps 12000+ (connect per request: [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
+ * qps 18000+ (connection keep alive: [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
 
 ## Build && Test
 ```
@@ -19,8 +19,8 @@
 ```
 
 ## Function List
-  * http 1.0/1.1(keep-alive 支持) GET/POST请求
-  * Json格式的数据返回
+  * http 1.0/1.1(keep-alive support) GET/POST request
+  * response as json format
 
 ## Example
 ```c++
