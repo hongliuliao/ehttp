@@ -3,7 +3,7 @@ compiler:
 - g++
 os:
 - linux
-script: make && make test && chmod +x ./run_ut.sh && ./run_ut.sh
+script: make && make test && chmod +x ./script/run_ut.sh && ./script/run_ut.sh
 env:
   global:
    - CODECOV_TOKEN="f4c49bd5-7f9e-44b3-86cf-ff800b26b19d"
