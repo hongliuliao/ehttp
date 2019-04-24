@@ -128,12 +128,7 @@ int FileAppender::delete_old_log(timeval tv) {
             _log_file.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday - 1);
     std::string old_file_path = _log_dir + "/" + old_file;
     int ret = remove(old_file_path.c_str());
-    if (ret == 0) {
-        return 1;
-    } else {
-        return 0;
-    }
-    return ret == 0 ? 1 : -1;
+    return ret;
 }
 
 int _check_config_file() {

@@ -26,3 +26,16 @@ TEST(FileAppendeTest, test_shift_file_if_need) {
     ret = appender.shift_file_if_need(now, tz);
     ASSERT_EQ(1, ret);
 }
+
+TEST(FileAppendeTest, test_delete_old_log) {
+    FileAppender appender;
+    int ret = appender.init("./log", "ehttp.log");
+    ASSERT_EQ(0, ret);
+
+    appender.set_retain_day(3);
+    struct timeval now;
+    struct timezone tz;
+    gettimeofday(&now, &tz);
+    ret = appender.delete_old_log(now);
+    ASSERT_EQ(-1, ret);
+}
