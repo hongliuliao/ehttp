@@ -51,7 +51,6 @@ class EpollSocketWatcher {
 
 };
 
-
 enum EpollSocketStatus {
     S_RUN = 0,
     S_REJECT_CONN = 1,

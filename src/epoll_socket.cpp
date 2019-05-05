@@ -245,7 +245,7 @@ int EpollSocket::handle_event(epoll_event &e) {
         if (_status == S_RUN) {
             this->handle_accept_event(_epollfd, e, *_watcher);
         } else {
-            LOG_INFO("current status:%d, not accept new connect", _status);
+            LOG_WARN("current status:%d, not accept new connect", _status);
             pthread_mutex_lock(&_client_lock);
             if (_clients == 0 && _status == S_REJECT_CONN) {
                 _status = S_STOP;
