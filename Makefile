@@ -20,11 +20,11 @@ GTEST_LIB=deps/googletest/googletest/make/gtest_main.a
 
 SRC_INCLUDE_PATH=-I src
 OUTPUT_INCLUDE_PATH=-I output/include
-OUTPUT_LIB_PATH=output/lib/libsimpleserver.a
+OUTPUT_LIB_PATH=output/lib/libehttp.a
 
 objects := $(patsubst %.cpp,%.o,$(wildcard src/*.cpp))
 
-all: libsimpleserver.a
+all: libehttp.a
 
 prepare: 
 	mkdir -p output/include output/lib output/bin
@@ -41,11 +41,12 @@ deps: prepare
 test-deps:
 	make -C deps/googletest/googletest/make
 
-libsimpleserver.a: deps $(objects)
-	ar -rcs libsimpleserver.a src/*.o
-	mv libsimpleserver.a output/lib/
+libehttp.a: deps $(objects)
+	ar -rcs libehttp.a src/*.o
+	mv libehttp.a output/lib/
+	cp output/lib/libehttp.a output/lib/libsimpleserver.a
 
-test: libsimpleserver.a http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test simple_log_test
+test: libehttp.a http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test simple_log_test
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
@@ -53,13 +54,13 @@ test: libsimpleserver.a http_server_test sim_parser_test issue5_server threadpoo
 http_server_test: test/http_server_test.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
-threadpool_test: test/threadpool_test.cpp test-deps libsimpleserver.a
+threadpool_test: test/threadpool_test.cpp test-deps libehttp.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
-http_multi_thread_demo: test/http_multi_thread_demo.cpp test-deps libsimpleserver.a
+http_multi_thread_demo: test/http_multi_thread_demo.cpp test-deps libehttp.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o output/bin/$@
 
-http_multipart_demo: test/http_multipart_demo.cpp libsimpleserver.a
+http_multipart_demo: test/http_multipart_demo.cpp libehttp.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o output/bin/$@
 
 sim_parser_test: test/sim_parser_test.cpp test-deps
