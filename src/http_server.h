@@ -39,21 +39,24 @@ static HttpMethod OPTIONS_METHOD = HttpMethod(3, "OPTIONS");
 typedef void (*method_handler_ptr)(Request& request, Response &response);
 typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
 
+class HttpJsonHandler {
+    public:
+        virtual int rsp_json(Request &req, Json::Value &rsp) = 0;
+};
+
 struct Resource {
     HttpMethod method;
     method_handler_ptr handler_ptr;
     json_handler_ptr json_ptr;
+    HttpJsonHandler *jh;
 };
 
 class HttpEpollWatcher : public EpollSocketWatcher {
     private:
-        std::map<std::string, Resource> resource_map;
+        std::map<std::string, Resource> *_resource_map;
     public:
+        HttpEpollWatcher(std::map<std::string, Resource> *resource_map);
         virtual ~HttpEpollWatcher() {}
-
-        void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
-
-        void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
 
         int handle_request(Request &request, Response &response);
 
@@ -70,10 +73,16 @@ class HttpEpollWatcher : public EpollSocketWatcher {
 class HttpServer {
     public:
         HttpServer();
+        ~HttpServer();
 
         void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
         void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
+
+        int add_mapping(const std::string &path, HttpJsonHandler *handler,
+                HttpMethod method = GET_METHOD);
+
+        int add_buildin_mappings();
 
         void add_bind_ip(std::string ip);
 
@@ -96,7 +105,9 @@ class HttpServer {
         void set_port(int port);
         int set_client_max_idle_time(int sec);
     private:
-        HttpEpollWatcher http_handler;
+        HttpEpollWatcher *_http_watcher;
+        std::map<std::string, Resource> *_resource_map;
+        std::vector<HttpJsonHandler *>_buildin_jhs;
         EpollSocket epoll_socket;
         int _backlog;
         int _max_events;

@@ -18,6 +18,7 @@
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <sstream>
+
 #include "simple_log.h"
 #include "sim_parser.h"
 #include "http_server.h"
@@ -61,6 +62,24 @@ HttpServer::HttpServer() {
     _backlog = 10;
     _max_events = 1000;
     _pid = 0;
+    _resource_map = new std::map<std::string, Resource>();
+    _http_watcher = new HttpEpollWatcher(_resource_map);
+}
+
+HttpServer::~HttpServer() {
+    if (_resource_map != NULL) {
+        delete _resource_map;
+        _resource_map = NULL;
+    }
+    if (_http_watcher != NULL) {
+        delete _http_watcher;
+        _http_watcher = NULL;
+    }
+    if (!_buildin_jhs.empty()) {
+        for (size_t i = 0; i < _buildin_jhs.size(); i++) {
+            delete _buildin_jhs[i];
+        }
+    }
 }
 
 int HttpServer::start(int port, int backlog, int max_events) {
@@ -68,7 +87,7 @@ int HttpServer::start(int port, int backlog, int max_events) {
     epoll_socket.set_port(port);
     epoll_socket.set_backlog(backlog);
     epoll_socket.set_max_events(max_events);
-    epoll_socket.set_watcher(&http_handler);
+    epoll_socket.set_watcher(_http_watcher);
     return epoll_socket.start_epoll();
 }
 
@@ -105,16 +124,56 @@ int HttpServer::start_sync() {
     epoll_socket.set_port(_port);
     epoll_socket.set_backlog(_backlog);
     epoll_socket.set_max_events(_max_events);
-    epoll_socket.set_watcher(&http_handler);
+    epoll_socket.set_watcher(_http_watcher);
     return epoll_socket.start_epoll();
 }
 
 void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
-    http_handler.add_mapping(path, handler, method);
+    Resource res = {method, handler, NULL, NULL};
+    (*_resource_map)[path] = res;
 }
 
 void HttpServer::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
-    http_handler.add_mapping(path, handler, method);
+    Resource res = {method, NULL, handler, NULL};
+    (*_resource_map)[path] = res;
+}
+        
+int HttpServer::add_mapping(const std::string &path, HttpJsonHandler *handler, HttpMethod method) {
+    Resource res = {method, NULL, NULL, handler};
+    (*_resource_map)[path] = res;
+    return 0;
+}
+
+class BuildInGetClientHandler : public HttpJsonHandler {
+    public:
+        BuildInGetClientHandler(EpollSocket *so) {
+            _ep_so = so;
+        }
+
+        int rsp_json(Request &req, Json::Value &root) {
+            std::set<EpollContext *, EpollContextComp> *eclients = _ep_so->get_clients();
+            std::set<EpollContext *, EpollContextComp>::iterator it = eclients->begin();
+            int i = 0;
+            for (; it != eclients->end(); it++) {
+                root[i]["fd"] = (*it)->fd;
+                root[i]["idle"] = (long long)time(NULL) - (*it)->_last_interact_time;
+                i++;
+            }
+            return 0;
+        }
+
+    private:
+        EpollSocket *_ep_so;
+};
+
+int HttpServer::add_buildin_mappings() {
+    HttpJsonHandler *get_clients_handler = new BuildInGetClientHandler(&epoll_socket);
+    _buildin_jhs.push_back(get_clients_handler);
+
+    for (size_t i = 0; i < _buildin_jhs.size(); i++) {
+        this->add_mapping("/_clients", _buildin_jhs[i]);
+    }
+    return 0;
 }
 
 void HttpServer::add_bind_ip(std::string ip) {
@@ -141,26 +200,20 @@ int HttpServer::set_client_max_idle_time(int sec) {
     return epoll_socket.set_client_max_idle_time(sec);
 }
 
-void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
-    Resource resource = {method, handler, NULL};
-    resource_map[path] = resource;
-}
-
-void HttpEpollWatcher::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
-    Resource resource = {method, NULL, handler};
-    resource_map[path] = resource;
+HttpEpollWatcher::HttpEpollWatcher(std::map<std::string, Resource> *resource_map) {
+    _resource_map = resource_map;
 }
 
 int HttpEpollWatcher::handle_request(Request &req, Response &res) {
     std::string uri = req.get_request_uri();
-    if (this->resource_map.find(uri) == this->resource_map.end()) { // not found
+    if (this->_resource_map->find(uri) == this->_resource_map->end()) { // not found
         res._code_msg = STATUS_NOT_FOUND;
         res._body = STATUS_NOT_FOUND.msg;
         LOG_INFO("page not found which uri:%s", uri.c_str());
         return 0;
     }
 
-    Resource resource = this->resource_map[req.get_request_uri()];
+    Resource resource = (*this->_resource_map)[req.get_request_uri()];
     // check method
     HttpMethod method = resource.method;
     if (method.get_names()->count(req._line.get_method()) == 0) {
@@ -179,6 +232,10 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
         res.set_body(root);
     } else if (resource.handler_ptr != NULL) {
         resource.handler_ptr(req, res);
+    } else if (resource.jh != NULL) {
+        Json::Value root;
+        resource.jh->rsp_json(req, root);
+        res.set_body(root);
     }
     LOG_DEBUG("handle response success which code:%d, msg:%s", 
         res._code_msg.status_code, res._code_msg.msg.c_str());

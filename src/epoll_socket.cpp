@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <signal.h>
 
+#include "json/json.h"
+
 #include "simple_log.h"
 #include "epoll_socket.h"
 
@@ -29,10 +31,11 @@ EpollContext::EpollContext() {
 }
 
 std::string EpollContext::to_string() {
-    std::stringstream ss;
-    ss << "[fd:" << fd << ", _last_interact_time:" << _last_interact_time
-        << ", _ctx_status:" << _ctx_status << "]";
-    return ss.str();
+    Json::Value root;
+    root["fd"] = fd;
+    root["idle"] = (long long)time(NULL) - _last_interact_time;
+    Json::FastWriter writer;
+    return writer.write(root);
 }
 
 EpollSocket::EpollSocket() {
@@ -394,10 +397,16 @@ int EpollSocket::clear_idle_clients() {
 }
 
 int EpollSocket::get_clients_info(std::stringstream &ss) {
+    Json::FastWriter writer;
+    Json::Value root;
     std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
+    int i = 0;
     for (; it != _eclients.end(); it++) {
-        ss << (*it)->to_string() << ";";
+        root[i]["fd"] = (*it)->fd;
+        root[i]["last_interact_time"] = (long long)(*it)->_last_interact_time;
+        i++;
     }
+    ss << writer.write(root);
     return 0;
 }
 

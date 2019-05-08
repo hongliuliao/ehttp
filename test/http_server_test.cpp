@@ -100,6 +100,8 @@ int main(int argc, char **args) {
     http_server.add_mapping("/sayhello", sayhello);
     http_server.add_mapping("/login", login, GET_METHOD | POST_METHOD);
 
+    http_server.add_buildin_mappings();
+
     http_server.add_bind_ip("127.0.0.1");
     http_server.set_port(atoi(args[1]));
     http_server.set_backlog(100000);
