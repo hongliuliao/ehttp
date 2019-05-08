@@ -100,6 +100,7 @@ int main(int argc, char **args) {
     http_server.add_mapping("/sayhello", sayhello);
     http_server.add_mapping("/login", login, GET_METHOD | POST_METHOD);
 
+    // http://<ip>:<port>/_clients
     http_server.add_buildin_mappings();
 
     http_server.add_bind_ip("127.0.0.1");

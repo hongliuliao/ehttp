@@ -168,11 +168,9 @@ class BuildInGetClientHandler : public HttpJsonHandler {
 
 int HttpServer::add_buildin_mappings() {
     HttpJsonHandler *get_clients_handler = new BuildInGetClientHandler(&epoll_socket);
+    this->add_mapping("/_clients", get_clients_handler);
     _buildin_jhs.push_back(get_clients_handler);
 
-    for (size_t i = 0; i < _buildin_jhs.size(); i++) {
-        this->add_mapping("/_clients", _buildin_jhs[i]);
-    }
     return 0;
 }
 

@@ -82,6 +82,10 @@ class HttpServer {
         int add_mapping(const std::string &path, HttpJsonHandler *handler,
                 HttpMethod method = GET_METHOD);
 
+        /**
+         * add a build-in service, it can get some inner infos in ehttp
+         * Get Clients info : http://<ip>:<port>/_clients
+         */
         int add_buildin_mappings();
 
         void add_bind_ip(std::string ip);
