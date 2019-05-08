@@ -250,6 +250,10 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
 
     // 1. read some response bytes
     int ret = res.readsome(buffer, SS_WRITE_BUFFER_SIZE, read_size);
+    if (read_size == 0) {
+        LOG_WARN("response read size is zero, close connect");
+        return WRITE_CONN_CLOSE;
+    }
     // 2. write bytes to socket
     int nwrite = send(fd, buffer, read_size, 0);
     if (nwrite < 0) {

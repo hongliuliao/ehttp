@@ -27,3 +27,36 @@ TEST(EpollSocketTest, test_clear_idle_clients) {
     es.remove_client(ctx);
     ASSERT_EQ(0, (int)es.get_clients()->size());
 }
+
+class MockEpollWatcher : public EpollSocketWatcher {
+    public:
+        virtual ~MockEpollWatcher() {}
+
+        virtual int on_accept(EpollContext &epoll_context) {
+            return 0;
+        }
+
+        virtual int on_readable(int &epollfd, epoll_event &event) {
+            return 0;
+        }
+
+        virtual int on_writeable(EpollContext &epoll_context) {
+            return WRITE_CONN_ALIVE;
+        }
+
+        virtual int on_close(EpollContext &epoll_context) {
+            return 0;
+        }
+};
+
+TEST(EpollSocketTest, test_handle_writeable_event) {
+    EpollContext *ctx = new EpollContext();
+    EpollSocket es;
+    int epollfd = 0;
+    epoll_event ee;
+    ee.data.ptr = ctx;
+    ee.events = 0;
+    MockEpollWatcher w;
+    int ret = es.handle_writeable_event(epollfd, ee, w);
+    ASSERT_EQ(0, ret);
+}

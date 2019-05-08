@@ -86,10 +86,6 @@ class EpollSocket {
 
         int listen_on();
 
-        int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
-
-        int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
-
         int close_and_release(epoll_event &event);
 
         int init_default_tp();
@@ -125,6 +121,8 @@ class EpollSocket {
          ~EpollSocket();
         
         int handle_readable_event(epoll_event &event);
+        int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+        int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
 
         int start_epoll();
         

@@ -177,8 +177,7 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
     int fd = epoll_context->fd;
 
     int ret = _watcher->on_readable(_epollfd, event);
-    if (ret == READ_CLOSE 
-            || epoll_context->_ctx_status == CONTEXT_SHOULD_CLOSE) {
+    if (ret == READ_CLOSE) {
         return close_and_release(event);
     }
     epoll_context->_last_interact_time = time(NULL);
@@ -210,8 +209,7 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     LOG_DEBUG("start write data");
 
     int ret = socket_handler.on_writeable(*epoll_context);
-    if(ret == WRITE_CONN_CLOSE
-            || epoll_context->_ctx_status == CONTEXT_SHOULD_CLOSE) {
+    if(ret == WRITE_CONN_CLOSE) {
         return close_and_release(event);
     }
     update_interact_time(epoll_context, time(NULL));
@@ -372,7 +370,9 @@ int EpollSocket::clear_idle_clients() {
         close_and_release(remove_evs[i]);
         cnt++;
     }
-    LOG_INFO("find idle clients cnt:%d", cnt);
+    if (cnt > 0) {
+        LOG_INFO("find idle clients cnt:%d", cnt);
+    }
     return cnt;
 }
 
