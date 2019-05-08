@@ -169,6 +169,9 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
 void read_func(void *data) {
     TaskData *td = (TaskData *) data;
     td->es->handle_readable_event(td->event);
+
+    EpollContext *hc = (EpollContext *) td->event.data.ptr;
+    hc->_ctx_status = CONTEXT_READ_OVER;
     delete td;
 }
 

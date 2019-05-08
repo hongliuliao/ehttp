@@ -25,11 +25,8 @@
 #define READ_CONTINUE 1
 #define READ_CLOSE -1
 
-#define CONTEXT_SHOULD_CLOSE 1
-#define CONTEXT_READING 2
-#define CONTEXT_READ_OVER 3
-#define CONTEXT_WRITING 4
-#define CONTEXT_WRITE_OVER 5
+#define CONTEXT_READING 1
+#define CONTEXT_READ_OVER 2
 
 class EpollContext {
     public:
