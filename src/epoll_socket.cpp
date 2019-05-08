@@ -180,7 +180,6 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
     if (ret == READ_CLOSE) {
         return close_and_release(event);
     }
-    epoll_context->_last_interact_time = time(NULL);
 
     if (ret == READ_CONTINUE) {
         event.events = EPOLLIN | EPOLLONESHOT;
@@ -208,11 +207,12 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
 
+    update_interact_time(epoll_context, time(NULL));
+
     int ret = socket_handler.on_writeable(*epoll_context);
     if(ret == WRITE_CONN_CLOSE) {
         return close_and_release(event);
     }
-    update_interact_time(epoll_context, time(NULL));
 
     if (ret == WRITE_CONN_CONTINUE) {
         event.events = EPOLLOUT | EPOLLONESHOT;
@@ -298,6 +298,8 @@ int EpollSocket::handle_event(epoll_event &e) {
         LOG_DEBUG("start handle readable event");
         EpollContext *hc = (EpollContext *) e.data.ptr;
         hc->_ctx_status = CONTEXT_READING;
+    
+        update_interact_time(hc, time(NULL));
 
         TaskData *tdata = new TaskData();
         tdata->event = e;
