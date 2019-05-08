@@ -8,6 +8,7 @@
 #include <climits>
 #include <cstdio>
 #include <cerrno>
+#include <sstream>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -21,12 +22,27 @@
 #include "simple_log.h"
 #include "epoll_socket.h"
 
+EpollContext::EpollContext() {
+    fd = -1;
+    _last_interact_time = 0;
+    _ctx_status = 0;
+}
+
+std::string EpollContext::to_string() {
+    std::stringstream ss;
+    ss << "[fd:" << fd << ", _last_interact_time:" << _last_interact_time
+        << ", _ctx_status:" << _ctx_status << "]";
+    return ss.str();
+}
+
 EpollSocket::EpollSocket() {
     _thread_pool = NULL;
     _use_default_tp = true;
     _status = S_RUN;
     _epollfd = -1;
     _clients = 0;
+    _max_idle_sec = 0;
+    _watcher = NULL;
     pthread_mutex_init(&_client_lock, NULL);
 }
 
@@ -110,6 +126,14 @@ int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
     return new_fd;
 }
 
+int EpollSocket::add_client(EpollContext *ctx) {
+    pthread_mutex_lock(&_client_lock);
+    _clients++;
+    _eclients.insert(ctx);
+    pthread_mutex_unlock(&_client_lock);
+    return 0;
+}
+
 int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     int sockfd = event.data.fd;
 
@@ -120,15 +144,14 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
     }
     set_nonblocking(conn_sock);
 
-    pthread_mutex_lock(&_client_lock);
-    _clients++;
-    pthread_mutex_unlock(&_client_lock);
-    LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
-
     EpollContext *epoll_context = new EpollContext();
     epoll_context->fd = conn_sock;
     epoll_context->client_ip = client_ip;
+    epoll_context->_last_interact_time = time(NULL);
+    
+    LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
 
+    add_client(epoll_context);
     socket_handler.on_accept(*epoll_context);
 
     struct epoll_event conn_sock_ev;
@@ -154,9 +177,12 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
     int fd = epoll_context->fd;
 
     int ret = _watcher->on_readable(_epollfd, event);
-    if (ret == READ_CLOSE) {
+    if (ret == READ_CLOSE 
+            || epoll_context->_ctx_status == CONTEXT_SHOULD_CLOSE) {
         return close_and_release(event);
     }
+    epoll_context->_last_interact_time = time(NULL);
+
     if (ret == READ_CONTINUE) {
         event.events = EPOLLIN | EPOLLONESHOT;
         epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
@@ -169,15 +195,26 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
     return 0;
 }
 
+int EpollSocket::update_interact_time(EpollContext *ctx, time_t t) {
+    pthread_mutex_lock(&_client_lock);
+    _eclients.erase(ctx);
+    ctx->_last_interact_time = t;
+    _eclients.insert(ctx);
+    pthread_mutex_unlock(&_client_lock);
+    return 0;
+}
+
 int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
 
     int ret = socket_handler.on_writeable(*epoll_context);
-    if(ret == WRITE_CONN_CLOSE) {
+    if(ret == WRITE_CONN_CLOSE
+            || epoll_context->_ctx_status == CONTEXT_SHOULD_CLOSE) {
         return close_and_release(event);
     }
+    update_interact_time(epoll_context, time(NULL));
 
     if (ret == WRITE_CONN_CONTINUE) {
         event.events = EPOLLOUT | EPOLLONESHOT;
@@ -214,6 +251,11 @@ void EpollSocket::set_backlog(int backlog) {
 
 void EpollSocket::set_max_events(int me) {
     _max_events = me;
+}
+
+int EpollSocket::set_client_max_idle_time(int sec) {
+    _max_idle_sec = sec;
+    return 0;
 }
 
 int EpollSocket::init_default_tp() {
@@ -256,6 +298,9 @@ int EpollSocket::handle_event(epoll_event &e) {
     } else if (e.events & EPOLLIN) {
         // handle readable async
         LOG_DEBUG("start handle readable event");
+        EpollContext *hc = (EpollContext *) e.data.ptr;
+        hc->_ctx_status = CONTEXT_READING;
+
         TaskData *tdata = new TaskData();
         tdata->event = e;
         tdata->es = this;
@@ -296,10 +341,54 @@ int EpollSocket::init_tp() {
     return ret;
 }
 
+int EpollSocket::clear_idle_clients() {
+    if (_max_idle_sec <= 0) {
+        return 0;
+    }
+    if (_eclients.empty()) {
+        return 0;
+    }
+    time_t timeout_ts = time(NULL) - _max_idle_sec;
+
+    std::vector<epoll_event> remove_evs;
+    pthread_mutex_lock(&_client_lock);
+    std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
+    for (; it != _eclients.end(); it++) {
+         EpollContext *ctx = *it;
+         if (ctx->_last_interact_time < timeout_ts && 
+                 ctx->_ctx_status != CONTEXT_READING) {
+             LOG_DEBUG("find idle client fd:%d", ctx->fd);
+             epoll_event e;
+             memset(&e, 0, sizeof(e));
+             e.data.ptr = ctx;
+             remove_evs.push_back(e);
+         } else {
+             LOG_DEBUG("find idle client but is reading, skip it!");
+         }
+    }
+    int cnt = 0;
+    pthread_mutex_unlock(&_client_lock);
+    for (size_t i = 0; i < remove_evs.size(); i++) {
+        close_and_release(remove_evs[i]);
+        cnt++;
+    }
+    LOG_INFO("find idle clients cnt:%d", cnt);
+    return cnt;
+}
+
+int EpollSocket::get_clients_info(std::stringstream &ss) {
+    std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
+    for (; it != _eclients.end(); it++) {
+        ss << (*it)->to_string() << ";";
+    }
+    return 0;
+}
+
 int EpollSocket::start_event_loop() {
+    int timeout_ms = 1000;
     epoll_event *events = new epoll_event[_max_events];
     while (_status != S_STOP) {
-        int fds_num = epoll_wait(_epollfd, events, _max_events, -1);
+        int fds_num = epoll_wait(_epollfd, events, _max_events, timeout_ms);
         if (fds_num == -1) {
             if (errno == EINTR) { /*The call was interrupted by a signal handler*/
                 continue;
@@ -307,10 +396,10 @@ int EpollSocket::start_event_loop() {
             LOG_ERROR("epoll_wait error:%s", strerror(errno));
             break;
         }
-
         for (int i = 0; i < fds_num; i++) {
             this->handle_event(events[i]);
         }
+        clear_idle_clients();
     }
     LOG_INFO("epoll wait loop stop ...");
     if (events != NULL) {
@@ -345,6 +434,14 @@ int EpollSocket::stop_epoll() {
     return 0;
 }
 
+int EpollSocket::remove_client(EpollContext *ctx) {
+    pthread_mutex_lock(&_client_lock);
+    _clients--;
+    _eclients.erase(ctx);
+    pthread_mutex_unlock(&_client_lock);
+    return 0;
+}
+
 int EpollSocket::close_and_release(epoll_event &epoll_event) {
     if (epoll_event.data.ptr == NULL) {
         return 0;
@@ -352,24 +449,29 @@ int EpollSocket::close_and_release(epoll_event &epoll_event) {
     LOG_DEBUG("connect close");
 
     EpollContext *hc = (EpollContext *) epoll_event.data.ptr;
-    _watcher->on_close(*hc);
+    if (_watcher) {
+        _watcher->on_close(*hc);
+    }
 
     int fd = hc->fd;
     epoll_event.events = EPOLLIN | EPOLLOUT;
-    epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
-
-    delete (EpollContext *) epoll_event.data.ptr;
-    epoll_event.data.ptr = NULL;
-
-    int ret = close(fd);
-
-    pthread_mutex_lock(&_client_lock);
-    _clients--;
+    if (_epollfd > 0) {
+        epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &epoll_event);
+    }
+    
+    remove_client(hc);
     if (_clients == 0 && _status == S_REJECT_CONN) {
         _status = S_STOP;
         LOG_INFO("client is empty and ready for stop server!");
     }
-    pthread_mutex_unlock(&_client_lock);
+
+    delete (EpollContext *) epoll_event.data.ptr;
+    epoll_event.data.ptr = NULL;
+
+    int ret = 0;
+    if (fd > 0) {
+        ret = close(fd);
+    }
 
     LOG_DEBUG("connect close complete which fd:%d, ret:%d", fd, ret);
     return ret;
@@ -378,3 +480,8 @@ int EpollSocket::close_and_release(epoll_event &epoll_event) {
 void EpollSocket::add_bind_ip(std::string ip) {
     _bind_ips.push_back(ip);
 }
+
+std::set<EpollContext *, EpollContextComp> *EpollSocket::get_clients() {
+    return &_eclients;
+}
+

@@ -25,11 +25,30 @@
 #define READ_CONTINUE 1
 #define READ_CLOSE -1
 
+#define CONTEXT_SHOULD_CLOSE 1
+#define CONTEXT_READING 2
+#define CONTEXT_READ_OVER 3
+#define CONTEXT_WRITING 4
+#define CONTEXT_WRITE_OVER 5
+
 class EpollContext {
     public:
+        EpollContext();
+        std::string to_string();
         void *ptr;
         int fd;
+        time_t _last_interact_time; // unit is second
         std::string client_ip;
+        int _ctx_status;
+};
+
+struct EpollContextComp {
+    bool operator() (const EpollContext* low, const EpollContext* high) const {
+        if (low->_last_interact_time < high->_last_interact_time) {
+            return true;
+        }
+        return low->fd < high->fd;
+    }
 };
 
 typedef void (*ScheduleHandlerPtr)();
@@ -93,6 +112,8 @@ class EpollSocket {
         std::set<int> _listen_sockets;
         pthread_mutex_t _client_lock;
         volatile int _clients;
+        std::set<EpollContext *, EpollContextComp> _eclients;
+        int _max_idle_sec;
         
         ThreadPool *_thread_pool;
         bool _use_default_tp;
@@ -119,9 +140,18 @@ class EpollSocket {
 
         void set_max_events(int max_events);
 
-        void set_schedule(ScheduleHandlerPtr h);
+        //void set_schedule(ScheduleHandlerPtr h);
+        int set_client_max_idle_time(int sec);
 
         void add_bind_ip(std::string ip);
+        int get_clients_info(std::stringstream &ss);
+
+        std::set<EpollContext *, EpollContextComp> *get_clients();
+        int add_client(EpollContext *ctx);
+        int remove_client(EpollContext *ctx);
+        int update_interact_time(EpollContext *ctx, time_t t);
+        int clear_idle_clients();
+
 };
 
 struct TaskData {

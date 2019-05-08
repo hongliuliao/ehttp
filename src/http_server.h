@@ -94,6 +94,7 @@ class HttpServer {
         void set_max_events(int me);
         
         void set_port(int port);
+        int set_client_max_idle_time(int sec);
     private:
         HttpEpollWatcher http_handler;
         EpollSocket epoll_socket;

@@ -137,6 +137,10 @@ void HttpServer::set_port(int port) {
     _port = port;
 }
 
+int HttpServer::set_client_max_idle_time(int sec) {
+    return epoll_socket.set_client_max_idle_time(sec);
+}
+
 void HttpEpollWatcher::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
     Resource resource = {method, handler, NULL};
     resource_map[path] = resource;
