@@ -4,10 +4,10 @@
 #include "simple_log.h"
 
 TEST(EpollSocketTest, test_clear_idle_clients) {
-    EpollContext *ctx = new EpollContext();
     EpollSocket es;
+    EpollContext *ctx = es.create_client(0, "127.0.0.1");
     es.add_client(ctx);
-    ASSERT_EQ(1, (int)es.get_clients()->size());
+    ASSERT_EQ(1, (int)es.get_clients().size());
 
     es.set_client_max_idle_time(3);
     time_t now = time(NULL);
@@ -20,12 +20,13 @@ TEST(EpollSocketTest, test_clear_idle_clients) {
     */
     int num = es.clear_idle_clients();
     ASSERT_EQ(1, num);
-    ASSERT_EQ(0, (int)es.get_clients()->size());
+    ASSERT_EQ(0, (int)es.get_clients().size());
 
-    es.add_client(ctx);
-    ASSERT_EQ(1, (int)es.get_clients()->size());
-    es.remove_client(ctx);
-    ASSERT_EQ(0, (int)es.get_clients()->size());
+    EpollContext *ctx2 = es.create_client(0, "127.0.0.1");
+    es.add_client(ctx2);
+    ASSERT_EQ(1, (int)es.get_clients().size());
+    es.remove_client(ctx2);
+    ASSERT_EQ(0, (int)es.get_clients().size());
 }
 
 class MockEpollWatcher : public EpollSocketWatcher {

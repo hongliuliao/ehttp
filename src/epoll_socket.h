@@ -32,6 +32,8 @@ class EpollContext {
     public:
         EpollContext();
         std::string to_string();
+
+        long long _id;
         void *ptr;
         int fd;
         time_t _last_interact_time; // unit is second
@@ -105,7 +107,7 @@ class EpollSocket {
         std::set<int> _listen_sockets;
         pthread_mutex_t _client_lock;
         volatile int _clients;
-        std::set<EpollContext *, EpollContextComp> _eclients;
+        std::map<long long, EpollContext *> _eclients;
         int _max_idle_sec;
         
         ThreadPool *_thread_pool;
@@ -142,7 +144,8 @@ class EpollSocket {
         void add_bind_ip(std::string ip);
         int get_clients_info(std::stringstream &ss);
 
-        std::set<EpollContext *, EpollContextComp> *get_clients();
+        std::map<long long, EpollContext *> get_clients();
+        EpollContext *create_client(int conn_sock, const std::string &client_ip);
         int add_client(EpollContext *ctx);
         int remove_client(EpollContext *ctx);
         int update_interact_time(EpollContext *ctx, time_t t);

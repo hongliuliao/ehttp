@@ -151,12 +151,13 @@ class BuildInGetClientHandler : public HttpJsonHandler {
         }
 
         int action(Request &req, Json::Value &root) {
-            std::set<EpollContext *, EpollContextComp> *eclients = _ep_so->get_clients();
-            std::set<EpollContext *, EpollContextComp>::iterator it = eclients->begin();
+            std::map<long long, EpollContext *> eclients = _ep_so->get_clients();
+            std::map<long long, EpollContext *>::iterator it = eclients.begin();
             int i = 0;
-            for (; it != eclients->end(); it++) {
-                root[i]["fd"] = (*it)->fd;
-                root[i]["idle"] = (long long)time(NULL) - (*it)->_last_interact_time;
+            for (; it != eclients.end(); it++) {
+                root[i]["id"] = (*it).first;
+                root[i]["fd"] = (*it).second->fd;
+                root[i]["idle"] = (long long)time(NULL) - (*it).second->_last_interact_time;
                 i++;
             }
             return 0;

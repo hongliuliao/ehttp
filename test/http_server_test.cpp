@@ -107,7 +107,7 @@ int main(int argc, char **args) {
     http_server.set_port(atoi(args[1]));
     http_server.set_backlog(100000);
     http_server.set_max_events(100000);
-    //http_server.set_client_max_idle_time(2);
+    http_server.set_client_max_idle_time(2);
     //http_server.add_bind_ip("192.168.238.158");
     http_server.start_async();
     //sleep(1);

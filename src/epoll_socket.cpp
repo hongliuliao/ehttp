@@ -24,10 +24,13 @@
 #include "simple_log.h"
 #include "epoll_socket.h"
 
+static long long g_client_id = 0;
+
 EpollContext::EpollContext() {
     fd = -1;
     _last_interact_time = 0;
     _ctx_status = 0;
+    _id = -1;
 }
 
 std::string EpollContext::to_string() {
@@ -132,9 +135,19 @@ int EpollSocket::accept_socket(int sockfd, std::string &client_ip) {
 int EpollSocket::add_client(EpollContext *ctx) {
     pthread_mutex_lock(&_client_lock);
     _clients++;
-    _eclients.insert(ctx);
+    _eclients[ctx->_id] = ctx;
     pthread_mutex_unlock(&_client_lock);
     return 0;
+}
+
+EpollContext *EpollSocket::create_client(int conn_sock, const std::string &client_ip) {
+    EpollContext *epoll_context = new EpollContext();
+    epoll_context->fd = conn_sock;
+    epoll_context->client_ip = client_ip;
+    epoll_context->_last_interact_time = time(NULL);
+    g_client_id++;
+    epoll_context->_id = g_client_id;
+    return epoll_context;
 }
 
 int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
@@ -146,11 +159,7 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
         return -1;
     }
     set_nonblocking(conn_sock);
-
-    EpollContext *epoll_context = new EpollContext();
-    epoll_context->fd = conn_sock;
-    epoll_context->client_ip = client_ip;
-    epoll_context->_last_interact_time = time(NULL);
+    EpollContext *epoll_context = create_client(conn_sock, client_ip);
     
     LOG_DEBUG("get accept socket which listen fd:%d, conn_sock_fd:%d", sockfd, conn_sock);
 
@@ -231,9 +240,7 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
 
 int EpollSocket::update_interact_time(EpollContext *ctx, time_t t) {
     pthread_mutex_lock(&_client_lock);
-    _eclients.erase(ctx);
     ctx->_last_interact_time = t;
-    _eclients.insert(ctx);
     pthread_mutex_unlock(&_client_lock);
     return 0;
 }
@@ -366,12 +373,10 @@ int EpollSocket::clear_idle_clients() {
 
     std::vector<epoll_event> remove_evs;
     pthread_mutex_lock(&_client_lock);
-    std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
+    std::map<long long, EpollContext *>::iterator it = _eclients.begin();
     for (; it != _eclients.end(); it++) {
-         EpollContext *ctx = *it;
-         if (ctx->_last_interact_time > timeout_ts) {
-             break;
-         }
+         //long long id = it->first;
+         EpollContext *ctx = it->second;
          if (ctx->_last_interact_time <= timeout_ts && 
                  ctx->_ctx_status != CONTEXT_READING) {
              LOG_DEBUG("find idle client fd:%d", ctx->fd);
@@ -399,11 +404,11 @@ int EpollSocket::clear_idle_clients() {
 int EpollSocket::get_clients_info(std::stringstream &ss) {
     Json::FastWriter writer;
     Json::Value root;
-    std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
+    std::map<long long, EpollContext *>::iterator it = _eclients.begin();
     int i = 0;
     for (; it != _eclients.end(); it++) {
-        root[i]["fd"] = (*it)->fd;
-        root[i]["last_interact_time"] = (long long)(*it)->_last_interact_time;
+        root[i]["fd"] = (*it).second->fd;
+        root[i]["last_interact_time"] = (long long)(*it).second->_last_interact_time;
         i++;
     }
     ss << writer.write(root);
@@ -463,7 +468,7 @@ int EpollSocket::stop_epoll() {
 int EpollSocket::remove_client(EpollContext *ctx) {
     pthread_mutex_lock(&_client_lock);
     _clients--;
-    _eclients.erase(ctx);
+    _eclients.erase(ctx->_id);
     pthread_mutex_unlock(&_client_lock);
     return 0;
 }
@@ -507,7 +512,11 @@ void EpollSocket::add_bind_ip(std::string ip) {
     _bind_ips.push_back(ip);
 }
 
-std::set<EpollContext *, EpollContextComp> *EpollSocket::get_clients() {
-    return &_eclients;
+std::map<long long, EpollContext *> EpollSocket::get_clients() {
+    std::map<long long, EpollContext *> ret;
+    pthread_mutex_lock(&_client_lock);
+    ret = _eclients;
+    pthread_mutex_unlock(&_client_lock);
+    return ret;
 }
 
