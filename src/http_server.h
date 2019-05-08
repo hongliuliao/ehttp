@@ -41,7 +41,7 @@ typedef void (*json_handler_ptr)(Request& request, Json::Value &response);
 
 class HttpJsonHandler {
     public:
-        virtual int rsp_json(Request &req, Json::Value &rsp) = 0;
+        virtual int action(Request &req, Json::Value &rsp) = 0;
 };
 
 struct Resource {

@@ -150,7 +150,7 @@ class BuildInGetClientHandler : public HttpJsonHandler {
             _ep_so = so;
         }
 
-        int rsp_json(Request &req, Json::Value &root) {
+        int action(Request &req, Json::Value &root) {
             std::set<EpollContext *, EpollContextComp> *eclients = _ep_so->get_clients();
             std::set<EpollContext *, EpollContextComp>::iterator it = eclients->begin();
             int i = 0;
@@ -232,7 +232,7 @@ int HttpEpollWatcher::handle_request(Request &req, Response &res) {
         resource.handler_ptr(req, res);
     } else if (resource.jh != NULL) {
         Json::Value root;
-        resource.jh->rsp_json(req, root);
+        resource.jh->action(req, root);
         res.set_body(root);
     }
     LOG_DEBUG("handle response success which code:%d, msg:%s", 
