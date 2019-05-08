@@ -355,7 +355,7 @@ int EpollSocket::clear_idle_clients() {
     std::set<EpollContext *, EpollContextComp>::iterator it = _eclients.begin();
     for (; it != _eclients.end(); it++) {
          EpollContext *ctx = *it;
-         if (ctx->_last_interact_time < timeout_ts && 
+         if (ctx->_last_interact_time <= timeout_ts && 
                  ctx->_ctx_status != CONTEXT_READING) {
              LOG_DEBUG("find idle client fd:%d", ctx->fd);
              epoll_event e;
