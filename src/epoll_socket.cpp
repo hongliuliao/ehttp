@@ -191,6 +191,10 @@ void read_func(void *data) {
 
 int EpollSocket::handle_readable_event(epoll_event &event) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    if (epoll_context == NULL) {
+        LOG_WARN("Get context from read event fail!");
+        return -1;
+    }
     int fd = epoll_context->fd;
 
     int ret = _watcher->on_readable(_epollfd, event);
@@ -200,14 +204,14 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
 
     if (ret == READ_CONTINUE) {
         event.events = EPOLLIN | EPOLLONESHOT;
-        epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
+        ret = epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
     } else if (ret == READ_OVER) { // READ_OVER
         event.events = EPOLLOUT | EPOLLONESHOT;
-        epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
+        ret = epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &event);
     } else {
         LOG_ERROR("unkonw read ret:%d", ret);
     }
-    return 0;
+    return ret;
 }
 
 int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {

@@ -9,6 +9,10 @@ TEST(EpollSocketTest, test_clear_idle_clients) {
     EpollContext *ctx = es.create_client(0, "127.0.0.1");
     es.add_client(ctx);
     ASSERT_EQ(1, (int)es.get_clients().size());
+    std::stringstream ss;
+    int ret = es.get_clients_info(ss);
+    ASSERT_EQ(0, ret);
+    ASSERT_TRUE(ss.str().size() > 0);
 
     es.set_client_max_idle_time(3);
     time_t now = time(NULL);
@@ -68,8 +72,11 @@ TEST(EpollSocketTest, test_start_epoll) {
     es.set_port(3456);
     es.set_backlog(1000);
     es.set_max_events(100);
+    es.add_bind_ip("127.0.0.1");
     int ret = es.start_epoll();
     ASSERT_EQ(-1, ret); // mock epoll_wait
+    ret = es.stop_epoll();
+    ASSERT_EQ(0, ret); // mock epoll_wait
 }
 
 class TestWatcher : public EpollSocketWatcher {
@@ -110,5 +117,13 @@ TEST(EpollSocketTest, test_handle_event) {
     EpollContext *ctx = es.create_client(0, "127.0.0.1");
     ee.data.ptr = ctx;
     ret = es.handle_event(ee);
+    ASSERT_EQ(0, ret); 
+
+    ee.data.ptr = NULL;
+    ret = es.handle_readable_event(ee);
+    ASSERT_EQ(-1, ret); 
+    
+    ee.data.ptr = ctx;
+    ret = es.handle_readable_event(ee);
     ASSERT_EQ(0, ret); 
 }
