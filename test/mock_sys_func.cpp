@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <errno.h>
 
 #include "simple_log.h"
 
@@ -23,5 +24,12 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
 int close(int fd) {
     LOG_INFO("mock for close, fd:%d", fd);
     return 0;
+}
+
+int epoll_wait(int epfd, struct epoll_event *events,
+        int maxevents, int timeout) {
+    LOG_INFO("mock for epoll_wait, epfd:%d", epfd);
+    errno = EBADF;
+    return -1;
 }
 

@@ -61,3 +61,9 @@ TEST(EpollSocketTest, test_handle_writeable_event) {
     int ret = es.handle_writeable_event(epollfd, ee, w);
     ASSERT_EQ(0, ret);
 }
+
+TEST(EpollSocketTest, test_start_epoll) {
+    EpollSocket es;
+    int ret = es.start_epoll();
+    ASSERT_EQ(-1, ret); // mock epoll_wait
+}

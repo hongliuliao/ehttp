@@ -418,6 +418,7 @@ int EpollSocket::get_clients_info(std::stringstream &ss) {
 int EpollSocket::start_event_loop() {
     int timeout_ms = 1000;
     epoll_event *events = new epoll_event[_max_events];
+    int ret = 0;
     while (_status != S_STOP) {
         int fds_num = epoll_wait(_epollfd, events, _max_events, timeout_ms);
         if (fds_num == -1) {
@@ -425,6 +426,7 @@ int EpollSocket::start_event_loop() {
                 continue;
             }
             LOG_ERROR("epoll_wait error:%s", strerror(errno));
+            ret = -1;
             break;
         }
         for (int i = 0; i < fds_num; i++) {
@@ -437,7 +439,7 @@ int EpollSocket::start_event_loop() {
         delete[] events;
         events = NULL;
     }
-    return 0;
+    return ret;
 }
 
 int EpollSocket::start_epoll() {
