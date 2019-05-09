@@ -41,15 +41,6 @@ class EpollContext {
         int _ctx_status;
 };
 
-struct EpollContextComp {
-    bool operator() (const EpollContext* low, const EpollContext* high) const {
-        if (low->_last_interact_time < high->_last_interact_time) {
-            return true;
-        }
-        return low->fd < high->fd;
-    }
-};
-
 typedef void (*ScheduleHandlerPtr)();
 
 class EpollSocketWatcher {
