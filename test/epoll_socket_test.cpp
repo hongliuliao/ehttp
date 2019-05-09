@@ -4,6 +4,7 @@
 #include "simple_log.h"
 
 TEST(EpollSocketTest, test_clear_idle_clients) {
+    set_log_level("WARN");
     EpollSocket es;
     EpollContext *ctx = es.create_client(0, "127.0.0.1");
     es.add_client(ctx);
@@ -64,6 +65,50 @@ TEST(EpollSocketTest, test_handle_writeable_event) {
 
 TEST(EpollSocketTest, test_start_epoll) {
     EpollSocket es;
+    es.set_port(3456);
+    es.set_backlog(1000);
+    es.set_max_events(100);
     int ret = es.start_epoll();
     ASSERT_EQ(-1, ret); // mock epoll_wait
+}
+
+class TestWatcher : public EpollSocketWatcher {
+    public:
+        virtual int on_accept(EpollContext &epoll_context) {
+            return 0;
+        }
+
+        virtual int on_readable(int &epollfd, epoll_event &event) {
+            return 0;
+        }
+
+        /**
+         * return :
+         * if return value == 1, we will close the connection
+         * if return value == 2, we will continue to write
+         */
+        virtual int on_writeable(EpollContext &epoll_context) {
+            return 1;
+        }
+
+        virtual int on_close(EpollContext &epoll_context) {
+            return 0;
+        }
+};
+
+TEST(EpollSocketTest, test_handle_event) {
+    EpollSocket es;
+    epoll_event ee;
+    memset(&ee, 0, sizeof(ee));
+    int ret = es.handle_event(ee);
+    ASSERT_EQ(-1, ret); 
+    ee.events = EPOLLOUT;
+    es.set_watcher(new TestWatcher());
+    ret = es.handle_event(ee);
+    ASSERT_EQ(-1, ret); // epoll ctx is null
+
+    EpollContext *ctx = es.create_client(0, "127.0.0.1");
+    ee.data.ptr = ctx;
+    ret = es.handle_event(ee);
+    ASSERT_EQ(0, ret); 
 }

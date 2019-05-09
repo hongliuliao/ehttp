@@ -212,6 +212,10 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
 
 int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_handler) {
     EpollContext *epoll_context = (EpollContext *) event.data.ptr;
+    if (epoll_context == NULL) {
+        LOG_WARN("Get epoll context fail in write event!");
+        return -1;
+    }
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
 
@@ -319,6 +323,7 @@ int EpollSocket::multi_thread_handle_read_event(epoll_event &e) {
 }
 
 int EpollSocket::handle_event(epoll_event &e) {
+    int ret = 0;
     if (_listen_sockets.count(e.data.fd)) {
         if (_status != S_RUN) {
             LOG_WARN("current status:%d, not accept new connect", _status);
@@ -330,17 +335,20 @@ int EpollSocket::handle_event(epoll_event &e) {
             pthread_mutex_unlock(&_client_lock);
         } 
         // accept connection
-        this->handle_accept_event(_epollfd, e, *_watcher);
+        ret = this->handle_accept_event(_epollfd, e, *_watcher);
     } else if (e.events & EPOLLIN) {
         // readable
-        this->multi_thread_handle_read_event(e);
+        ret = this->multi_thread_handle_read_event(e);
     } else if (e.events & EPOLLOUT) {
         // writeable
-        this->handle_writeable_event(_epollfd, e, *_watcher);
+        if (_watcher != NULL) {
+            ret = this->handle_writeable_event(_epollfd, e, *_watcher);
+        }
     } else {
         LOG_INFO("unkonw events :%d", e.events);
+        ret = -1;
     }
-    return 0;
+    return ret;
 }
 
 int EpollSocket::create_epoll() {

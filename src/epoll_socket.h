@@ -86,8 +86,6 @@ class EpollSocket {
 
         int add_listen_sock_to_epoll();
 
-        int handle_event(epoll_event &e);
-
         int start_event_loop();
 
         std::vector<std::string> _bind_ips;
@@ -114,6 +112,7 @@ class EpollSocket {
         int handle_readable_event(epoll_event &event);
         int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
         int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
+        int handle_event(epoll_event &e);
 
         int start_epoll();
         

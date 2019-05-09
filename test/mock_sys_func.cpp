@@ -18,7 +18,7 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags) {
  
 int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event) {
     LOG_INFO("mock for epoll_ctl func");
-    return -1;
+    return 0;
 }
 
 int close(int fd) {
