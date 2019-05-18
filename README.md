@@ -4,9 +4,6 @@
 
 This library make http (with json) microservice easy!
 
-## Positon
-<img width="450" height="350" alt="ehttp in micro-services" src="https://github.com/hongliuliao/ehttp/raw/master/doc/ehttp.png"/>
-
 ## Feature
 * Base on linux epoll
 * Multi-thread model
