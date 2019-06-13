@@ -1,0 +1,4 @@
+2019-06-13
+(1) Unit test code coverage up to 85%
+(2) Check client idle is open to set client interact time
+(3) Callback handler support non threadsafe class
