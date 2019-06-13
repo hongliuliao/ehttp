@@ -4,16 +4,13 @@
 
 This library make http (with json) microservice easy!
 
-## Positon
-<img width="450" height="350" alt="ehttp in micro-services" src="https://github.com/hongliuliao/ehttp/raw/master/doc/ehttp.png"/>
-
 ## Feature
 * Base on linux epoll
 * Multi-thread model
 
 ## Performance (without log print)
- * qps 12000+ (connect per request: [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
- * qps 18000+ (connection keep alive: [ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
+ * Connect per request: qps 12000+ ([ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 localhost:3456/hello)
+ * Connection keep alive: qps 18000+ ([ab](https://github.com/CloudFundoo/ApacheBench-ab) -c 10 -n 10000 -k localhost:3456/hello)
 
 ## Build && Test
 ```
