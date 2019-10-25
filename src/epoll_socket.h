@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <map>
 #include "threadpool.h"
 
 #define SS_WRITE_BUFFER_SIZE 4096
