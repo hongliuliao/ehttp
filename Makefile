@@ -90,3 +90,5 @@ clean:
 	rm -rf output/*
 	make -C deps/multipart-parser-c clean
 	make -C deps/googletest/googletest/make clean
+	make -C deps/http-parser clean
+	make -C deps/json-cpp clean
