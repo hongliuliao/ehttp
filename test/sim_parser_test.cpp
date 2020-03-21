@@ -10,7 +10,7 @@
 
 #include "gtest/gtest.h"
 
-const std::string TEST_GET_REQ = "GET /hello?name=aaa&kw=%E4%B8%89%E6%98%8E HTTP/1.1\r\n" \
+const std::string TEST_GET_REQ = "GET /hello?name=aaa&kw=%E4%B8%89%E6%98%8E&m-name=a1&m-name=a2 HTTP/1.1\r\n" \
                              "Host: api.yeelink.net\r\n" \
                              "U-ApiKey: 121234132432143\r\n" \
                              "\r\n";
@@ -50,46 +50,6 @@ const std::string TEST_MULTIPART = "POST /login HTTP/1.0\r\n" \
                                   "PNG ... content of chrome.png ...\r\n" \
                                   "\r\n" \
                                   "------WebKitFormBoundaryrGKCBY7qhFd3TrwA--";
-
-TEST(RequestTest, test_get_unescape) {
-    set_log_level("WARN");
-
-    Request req;
-    int ret = req.parse_request(TEST_GET_REQ.c_str(), TEST_GET_REQ.size());
-    if (ret != 0) {
-        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_GET_REQ.c_str());
-    }
-    ASSERT_EQ(0, ret);
-
-    std::string name = req.get_param("name");
-    std::string kw = req.get_unescape_param("kw");
-    LOG_INFO("Get 'name' param :%s", name.c_str());
-    LOG_INFO("Get 'kw' param :%s", kw.c_str());
-    ASSERT_STREQ("aaa", name.c_str());
-    ASSERT_STREQ("三明", kw.c_str());
-    std::vector<std::string> params;
-    req.get_params("name", params);
-    ASSERT_EQ(1, (int) params.size());
-    std::string uri = req.get_request_uri();
-    ASSERT_EQ("/hello", uri);
-}
-
-TEST(RequestTest, test_parse_post) {
-    set_log_level("WARN");
-
-    Request req;
-    int ret = req.parse_request(TEST_POST_REQ.c_str(), TEST_POST_REQ.size());
-    if (ret != 0) {
-        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_POST_REQ.c_str());
-    }
-    ASSERT_EQ(0, ret);
-    std::string name = req.get_param("name");
-    std::string pwd = req.get_param("pwd");
-    LOG_INFO("Get 'name' param :%s", name.c_str());
-    LOG_INFO("Get 'pwd' param :%s", pwd.c_str());
-    ASSERT_STREQ("aa", name.c_str());
-    ASSERT_STREQ("xx", pwd.c_str());
-}
 
 int on_message_begin(http_parser *p) {
     LOG_INFO("MESSAGE START!");
@@ -147,7 +107,55 @@ int on_chunk_header(http_parser *p) {
     return 0;
 }
 
-int test_http_parser() {
+TEST(RequestTest, test_parse_get) {
+    set_log_level("WARN");
+
+    Request req;
+    int ret = req.parse_request(TEST_GET_REQ.c_str(), TEST_GET_REQ.size());
+    if (ret != 0) {
+        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_GET_REQ.c_str());
+    }
+    ASSERT_EQ(0, ret);
+
+    std::string name = req.get_param("name");
+    std::string kw = req.get_unescape_param("kw");
+    LOG_INFO("Get 'name' param :%s", name.c_str());
+    LOG_INFO("Get 'kw' param :%s", kw.c_str());
+    ASSERT_STREQ("aaa", name.c_str());
+    ASSERT_STREQ("三明", kw.c_str());
+    std::vector<std::string> params;
+    req.get_params("name", params);
+    ASSERT_EQ(1, (int) params.size());
+    std::string uri = req.get_request_uri();
+    ASSERT_EQ("/hello", uri);
+    ASSERT_EQ("", req.get_param("nofound"));
+    std::vector<std::string> mnames;
+    req.get_params("m-name", mnames);
+    ASSERT_EQ(2, mnames.size());
+    // client ip
+    std::string client_ip = "127.0.0.1";
+    req.set_client_ip(&client_ip);
+    ASSERT_EQ(client_ip, *(req.get_client_ip()));
+}
+
+TEST(RequestTest, test_parse_post) {
+    set_log_level("WARN");
+
+    Request req;
+    int ret = req.parse_request(TEST_POST_REQ.c_str(), TEST_POST_REQ.size());
+    if (ret != 0) {
+        LOG_ERROR("PARSE request error which ret:%d, req str:%s", ret, TEST_POST_REQ.c_str());
+    }
+    ASSERT_EQ(0, ret);
+    std::string name = req.get_param("name");
+    std::string pwd = req.get_param("pwd");
+    LOG_INFO("Get 'name' param :%s", name.c_str());
+    LOG_INFO("Get 'pwd' param :%s", pwd.c_str());
+    ASSERT_STREQ("aa", name.c_str());
+    ASSERT_STREQ("xx", pwd.c_str());
+}
+
+TEST(HttpParserTest, test_parse_request) {
     http_parser_settings settings;
     settings.on_message_begin = NULL;
     settings.on_url = request_url_cb;
@@ -169,7 +177,8 @@ int test_http_parser() {
     if (parser.http_errno) {
         LOG_INFO("ERROR:%s", http_errno_description(HTTP_PARSER_ERRNO(&parser)));
     }
-    return 0;
+    ASSERT_EQ(TEST_POST_REQ.size(), nparsed);
+    ASSERT_EQ(0, parser.http_errno);
 }
 
 TEST(RequestTest, test_http_parser_stream) {
@@ -269,6 +278,7 @@ TEST(ResponseTest, test_gen_response) {
 TEST(HttpContextTest, test_print_access_log) {
     //set_log_level("INFO");
     HttpContext hc(0); // use stdin fd
+    hc.record_start_time();
     int ret = hc.get_request().parse_request(TEST_GET_REQ.c_str(), TEST_GET_REQ.size());
     ASSERT_EQ(0, ret);
     ret = hc.get_res().gen_response("HTTP/1.0", false);

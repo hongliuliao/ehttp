@@ -170,10 +170,13 @@ class RequestBody {
         std::string *get_raw_string();
 
         RequestParam *get_req_params();
+        /**
+         * if request content type is multipart/form-data
+         * this method will get file items
+         */
+        std::vector<FileItem> *get_file_items();
 
         int parse_multi_params();
-
-        std::vector<FileItem> *get_file_items();
 
     private:
         std::string _raw_string;
@@ -208,6 +211,9 @@ class Request {
          */
         std::string get_request_url();
 
+        /**
+         * return client ip like 127.0.0.1
+         */
         std::string *get_client_ip();
 
         void set_client_ip(std::string *ip);
@@ -216,7 +222,7 @@ class Request {
 
         int parse_request(const char *read_buffer, int read_size);
 
-        int clear();
+        //int clear();
 
         RequestBody *get_body();
 
