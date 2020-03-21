@@ -1,4 +1,5 @@
 # ehttp 
+![C/C++ CI](https://github.com/hongliuliao/ehttp/workflows/C/C++%20CI/badge.svg)
 [![Build Status](https://travis-ci.org/hongliuliao/ehttp.svg?branch=master)](https://travis-ci.org/hongliuliao/ehttp)
 [![codecov.io](http://codecov.io/github/hongliuliao/ehttp/coverage.svg?branch=master)](http://codecov.io/github/hongliuliao/ehttp?branch=master)
 
