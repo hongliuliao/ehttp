@@ -36,20 +36,20 @@ void hello(Request &request, Json::Value &root) {
 }
 
 void sayhello(Request &request, Json::Value &root) {
-	std::string name = request.get_param("name");
-	std::string age = request.get_param("age");
+    std::string name = request.get_param("name");
+    std::string age = request.get_param("age");
 
-	root["name"] = name;
-	root["age"] = atoi(age.c_str());
+    root["name"] = name;
+    root["age"] = atoi(age.c_str());
 }
 
 void login(Request &request, Json::Value &root) {
-	std::string name = request.get_param("name");
-	std::string pwd = request.get_param("pwd");
+    std::string name = request.get_param("name");
+    std::string pwd = request.get_param("pwd");
 
-	LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
-	root["code"] = 0;
-	root["msg"] = "login success!";
+    LOG_DEBUG("login user which name:%s, pwd:%s", name.c_str(), pwd.c_str());
+    root["code"] = 0;
+    root["msg"] = "login success!";
 }
 
 void usleep(Request &request, Response &response) {
