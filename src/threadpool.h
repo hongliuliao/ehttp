@@ -9,32 +9,26 @@
 const int STARTED = 0;
 const int STOPPED = 1;
 
-class Mutex
-{
+class Mutex {
     public:
-        Mutex()
-        {
+        Mutex() {
             pthread_mutex_init(&m_lock, NULL);
             is_locked = false;
         }
-        ~Mutex()
-        {
+        ~Mutex() {
             while(is_locked);
             unlock(); // Unlock Mutex after shared resource is safe
             pthread_mutex_destroy(&m_lock);
         }
-        void lock()
-        {
+        void lock() {
             pthread_mutex_lock(&m_lock);
             is_locked = true;
         }
-        void unlock()
-        {
+        void unlock() {
             is_locked = false; // do it BEFORE unlocking to avoid race condition
             pthread_mutex_unlock(&m_lock);
         }
-        pthread_mutex_t* get_mutex_ptr()
-        {
+        pthread_mutex_t* get_mutex_ptr() {
             return &m_lock;
         }
     private:
@@ -42,8 +36,7 @@ class Mutex
         volatile bool is_locked;
 };
 
-class CondVar
-{
+class CondVar {
     public:
         CondVar() { pthread_cond_init(&m_cond_var, NULL); }
         ~CondVar() { pthread_cond_destroy(&m_cond_var); }
@@ -54,8 +47,7 @@ class CondVar
         pthread_cond_t m_cond_var;
 };
 
-class Task
-{
+class Task {
     public: 
         Task(void (*fn_ptr)(void*), void* arg); // pass a free function pointer
         ~Task();
@@ -68,8 +60,7 @@ class Task
 typedef void (*ThreadStartCallback)();
 typedef void (*ThreadExitCallback)();
 
-class ThreadPool
-{
+class ThreadPool {
     public:
         ThreadPool();
         ~ThreadPool();
@@ -85,13 +76,13 @@ class ThreadPool
         ThreadStartCallback m_scb;
         ThreadExitCallback m_exit_cb;
     private:
-        int m_pool_size;
-        Mutex m_task_mutex;
-        CondVar m_task_cond_var;
-        std::vector<pthread_t> m_threads; // storage for threads
-        std::deque<Task *> m_tasks;
-        volatile int m_pool_state;
-        int m_task_size_limit;
+        int _pool_size;
+        Mutex _task_mutex;
+        CondVar _task_cond_var;
+        std::vector<pthread_t> _threads; // storage for threads
+        std::deque<Task *> _tasks;
+        volatile int _pool_state;
+        int _task_size_limit;
 };
 
 #endif /* _H_THREADPOOL */

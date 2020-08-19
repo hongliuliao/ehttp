@@ -22,14 +22,14 @@ void Task::run() {
 ThreadPool::ThreadPool() {
     m_scb = NULL;
     m_exit_cb = NULL;
-    m_task_size_limit = -1;
-    m_pool_size = 0;
-    m_pool_state = -1;
+    _task_size_limit = -1;
+    _pool_size = 0;
+    _pool_state = -1;
 }
 
 ThreadPool::~ThreadPool() {
     // Release resources
-    if (m_pool_state == STARTED) {
+    if (_pool_state == STARTED) {
         destroy_threadpool();
     }
 }
@@ -55,26 +55,26 @@ int ThreadPool::start() {
 }
 
 int ThreadPool::start_threadpool() {
-    if (m_pool_size == 0) {
+    if (_pool_size == 0) {
         LOG_ERROR("pool size must be set!");
         return -1;
     }
-    if (m_pool_state == STARTED) {
+    if (_pool_state == STARTED) {
         LOG_WARN("ThreadPool has started!");
         return 0;
     }
-    m_pool_state = STARTED;
+    _pool_state = STARTED;
     int ret = -1;
-    for (int i = 0; i < m_pool_size; i++) {
+    for (int i = 0; i < _pool_size; i++) {
         pthread_t tid;
         ret = pthread_create(&tid, NULL, ss_start_thread, (void*) this);
         if (ret != 0) {
             LOG_ERROR("pthread_create() failed: %d", ret);
             return -1;
         }
-        m_threads.push_back(tid);
+        _threads.push_back(tid);
     }
-    LOG_DEBUG("%d threads created by the thread pool", m_pool_size);
+    LOG_DEBUG("%d threads created by the thread pool", _pool_size);
 
     return 0;
 }
@@ -88,34 +88,34 @@ void ThreadPool::set_thread_exit_cb(ThreadExitCallback f) {
 }
 
 void ThreadPool::set_task_size_limit(int size) {
-    m_task_size_limit = size;
+    _task_size_limit = size;
 }
 
 void ThreadPool::set_pool_size(int pool_size) {
-    m_pool_size = pool_size;
+    _pool_size = pool_size;
 }
 
 int ThreadPool::destroy_threadpool() {
     // Note: this is not for synchronization, its for thread communication!
     // destroy_threadpool() will only be called from the main thread, yet
-    // the modified m_pool_state may not show up to other threads until its 
+    // the modified _pool_state may not show up to other threads until its 
     // modified in a lock!
-    m_task_mutex.lock();
-    m_pool_state = STOPPED;
-    m_task_mutex.unlock();
+    _task_mutex.lock();
+    _pool_state = STOPPED;
+    _task_mutex.unlock();
     LOG_INFO("Broadcasting STOP signal to all threads...");
-    m_task_cond_var.broadcast(); // notify all threads we are shttung down
+    _task_cond_var.broadcast(); // notify all threads we are shttung down
 
     int ret = -1;
-    for (int i = 0; i < m_pool_size; i++) {
+    for (int i = 0; i < _pool_size; i++) {
         void* result;
-        ret = pthread_join(m_threads[i], &result);
+        ret = pthread_join(_threads[i], &result);
         LOG_DEBUG("pthread_join() returned %d", ret);
-        m_task_cond_var.broadcast(); // try waking up a bunch of threads that are still waiting
+        _task_cond_var.broadcast(); // try waking up a bunch of threads that are still waiting
     }
     LOG_INFO("%d threads exited from the thread pool, task size:%u", 
-            m_pool_size, m_tasks.size());
-    return m_tasks.size();
+            _pool_size, _tasks.size());
+    return _tasks.size();
 }
 
 void* ThreadPool::execute_thread() {
@@ -124,7 +124,7 @@ void* ThreadPool::execute_thread() {
     while(true) {
         // Try to pick a task
         LOG_DEBUG("Locking: %u", pthread_self());
-        m_task_mutex.lock();
+        _task_mutex.lock();
 
         // We need to put pthread_cond_wait in a loop for two reasons:
         // 1. There can be spurious wakeups (due to signal/ENITR)
@@ -132,28 +132,28 @@ void* ThreadPool::execute_thread() {
         //    from a signal/broadcast and that thread can mess up the condition.
         //    So when the current thread wakes up the condition may no longer be
         //    actually true!
-        while ((m_pool_state != STOPPED) && (m_tasks.empty())) {
+        while ((_pool_state != STOPPED) && (_tasks.empty())) {
             // Wait until there is a task in the queue
             // Unlock mutex while wait, then lock it back when signaled
             LOG_DEBUG("Unlocking and waiting: %u", pthread_self());
-            m_task_cond_var.wait(m_task_mutex.get_mutex_ptr());
+            _task_cond_var.wait(_task_mutex.get_mutex_ptr());
             LOG_DEBUG("Signaled and locking: %u", pthread_self());
         }
 
         // If the thread was woken up to notify process shutdown, return from here
-        if (m_pool_state == STOPPED) {
+        if (_pool_state == STOPPED) {
             LOG_INFO("Unlocking and exiting: %u", pthread_self());
-            m_task_mutex.unlock();
+            _task_mutex.unlock();
             if (m_exit_cb != NULL) {
                 m_exit_cb();
             }
             pthread_exit(NULL);
         }
 
-        task = m_tasks.front();
-        m_tasks.pop_front();
+        task = _tasks.front();
+        _tasks.pop_front();
         LOG_DEBUG("Unlocking: %u", pthread_self());
-        m_task_mutex.unlock();
+        _task_mutex.unlock();
 
         //cout << "Executing thread " << pthread_self() << endl;
         // execute the task
@@ -165,18 +165,18 @@ void* ThreadPool::execute_thread() {
 }
 
 int ThreadPool::add_task(Task *task) {
-    m_task_mutex.lock();
+    _task_mutex.lock();
 
-    if (m_task_size_limit > 0 && (int) m_tasks.size() > m_task_size_limit) {
-        LOG_WARN("task size reach limit:%d", m_task_size_limit);
-        m_task_mutex.unlock();
+    if (_task_size_limit > 0 && (int) _tasks.size() > _task_size_limit) {
+        LOG_WARN("task size reach limit:%d", _task_size_limit);
+        _task_mutex.unlock();
         return -1;
     }
-    m_tasks.push_back(task);
+    _tasks.push_back(task);
 
-    m_task_cond_var.signal(); // wake up one thread that is waiting for a task to be available
+    _task_cond_var.signal(); // wake up one thread that is waiting for a task to be available
 
-    m_task_mutex.unlock();
+    _task_mutex.unlock();
 
     return 0;
 }
