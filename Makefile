@@ -55,7 +55,7 @@ test: libehttp.a hello_server http_server_test sim_parser_test issue5_server thr
 hello_server: test/hello_server.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o $(OUTPUT_TEST_DIR)/$@
 
-http_server_test: test/http_server_test.cpp
+http_server_test: test/http_server_test.cpp test-deps libehttp.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o $(OUTPUT_TEST_DIR)/$@
 
 threadpool_test: test/threadpool_test.cpp test-deps libehttp.a
