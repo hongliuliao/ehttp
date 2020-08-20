@@ -15,7 +15,7 @@ This library make http (with json) microservice easy!
 
 ## Build && Test
 ```
- make && make test && ./output/bin/http_server_test 3456
+ make && make test && ./output/bin/hello_server 3456
  curl "localhost:3456/hello"
 ```
 

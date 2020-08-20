@@ -50,6 +50,11 @@ struct Resource {
     method_handler_ptr handler_ptr;
     json_handler_ptr json_ptr;
     HttpJsonHandler *jh;
+    Resource() {
+        handler_ptr = NULL;
+        json_ptr = NULL;
+        jh = NULL;
+    }
 };
 
 class HttpEpollWatcher : public EpollSocketWatcher {
@@ -57,17 +62,18 @@ class HttpEpollWatcher : public EpollSocketWatcher {
         std::map<std::string, Resource> *_resource_map;
     public:
         HttpEpollWatcher(std::map<std::string, Resource> *resource_map);
+
         virtual ~HttpEpollWatcher() {}
 
         int handle_request(Request &request, Response &response);
 
-        virtual int on_accept(EpollContext &epoll_context) ;
+        virtual int on_accept(EpollContext &epoll_context);
 
-        virtual int on_readable(int &epollfd, epoll_event &event) ;
+        virtual int on_readable(int &epollfd, epoll_event &event);
 
-        virtual int on_writeable(EpollContext &epoll_context) ;
+        virtual int on_writeable(EpollContext &epoll_context);
 
-        virtual int on_close(EpollContext &epoll_context) ;
+        virtual int on_close(EpollContext &epoll_context);
 };
 
 
@@ -76,9 +82,9 @@ class HttpServer {
         HttpServer();
         ~HttpServer();
 
-        void add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
+        int add_mapping(std::string path, method_handler_ptr handler, HttpMethod method = GET_METHOD);
 
-        void add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
+        int add_mapping(std::string path, json_handler_ptr handler, HttpMethod method = GET_METHOD);
 
         int add_mapping(const std::string &path, HttpJsonHandler *handler,
                 HttpMethod method = GET_METHOD);
@@ -108,6 +114,7 @@ class HttpServer {
         void set_max_events(int me);
         
         void set_port(int port);
+
         int set_client_max_idle_time(int sec);
     private:
         HttpEpollWatcher *_http_watcher;

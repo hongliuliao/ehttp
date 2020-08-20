@@ -128,18 +128,38 @@ int HttpServer::start_sync() {
     return epoll_socket.start_epoll();
 }
 
-void HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
-    Resource res = {method, handler, NULL, NULL};
+int HttpServer::add_mapping(std::string path, method_handler_ptr handler, HttpMethod method) {
+    if (_resource_map->count(path)) {
+        LOG_ERROR("[http] add mapping fail, path repeated, path:%s", path.c_str());
+        return -1;
+    }
+    Resource res;
+    res.method = method;
+    res.handler_ptr = handler;
     (*_resource_map)[path] = res;
+    return 0;
 }
 
-void HttpServer::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
-    Resource res = {method, NULL, handler, NULL};
+int HttpServer::add_mapping(std::string path, json_handler_ptr handler, HttpMethod method) {
+    if (_resource_map->count(path)) {
+        LOG_ERROR("[http] add mapping fail, path repeated, path:%s", path.c_str());
+        return -1;
+    }
+    Resource res;
+    res.method = method;
+    res.json_ptr = handler;
     (*_resource_map)[path] = res;
+    return 0;
 }
         
 int HttpServer::add_mapping(const std::string &path, HttpJsonHandler *handler, HttpMethod method) {
-    Resource res = {method, NULL, NULL, handler};
+    if (_resource_map->count(path)) {
+        LOG_ERROR("[http] add mapping fail, path repeated, path:%s", path.c_str());
+        return -1;
+    }
+    Resource res;
+    res.method = method;
+    res.jh = handler;
     (*_resource_map)[path] = res;
     return 0;
 }

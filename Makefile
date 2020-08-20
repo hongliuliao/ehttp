@@ -47,13 +47,16 @@ libehttp.a: deps $(objects)
 	mv libehttp.a output/lib/
 	cp output/lib/libehttp.a output/lib/libsimpleserver.a
 
-test: libehttp.a http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test simple_log_test epoll_socket_test
+test: libehttp.a hello_server http_server_test sim_parser_test issue5_server threadpool_test string_utils_test simple_config_test simple_log_test epoll_socket_test
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $(DEPS_INCLUDE_PATH) $(SRC_INCLUDE_PATH) $< -o $@
 
-http_server_test: test/http_server_test.cpp
+hello_server: test/hello_server.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) -o $(OUTPUT_TEST_DIR)/$@
+
+http_server_test: test/http_server_test.cpp
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o $(OUTPUT_TEST_DIR)/$@
 
 threadpool_test: test/threadpool_test.cpp test-deps libehttp.a
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(DEPS_INCLUDE_PATH) $(OUTPUT_INCLUDE_PATH) $(GTEST_INC) $< $(OUTPUT_LIB_PATH) $(DEPS_LIB_PATH) $(GTEST_LIB) -o $(OUTPUT_TEST_DIR)/$@
