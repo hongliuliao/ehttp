@@ -51,4 +51,24 @@ TEST(HttpServerTest, test_add_mappings) {
     ASSERT_EQ(-1, ret);
 }
 
+TEST(HttpServerTest, test_start) {
+    set_log_level("WARN");
+    HttpServer server;
+    int ret = server.add_mapping("/test2", json_handler_test, GET_METHOD | POST_METHOD);
+    ASSERT_EQ(0, ret);
+
+    server.add_bind_ip("127.0.0.1");
+    server.set_backlog(100);
+    server.set_max_events(1000);
+    server.set_port(1122);
+    server.set_client_max_idle_time(10);
+    ret = server.start_async();
+    if (!server.is_running()) {
+        usleep(100 * 1000); // 100ms
+    }
+    server.stop();
+    server.join();
+    ASSERT_EQ(0, ret);
+}
+
 /* vim: set expandtab ts=4 sw=4 sts=4 tw=100: */

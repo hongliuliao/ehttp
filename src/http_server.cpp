@@ -112,6 +112,10 @@ int HttpServer::start_async() {
     return 0;
 }
 
+bool HttpServer::is_running() {
+    return epoll_socket.is_run();
+}
+
 int HttpServer::join() {
     if (_pid == 0) {
         LOG_ERROR("HttpServer not start async!");

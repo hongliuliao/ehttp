@@ -101,6 +101,8 @@ class HttpServer {
         
         int start_async();
 
+        bool is_running();
+
         int stop();
 
         int join();

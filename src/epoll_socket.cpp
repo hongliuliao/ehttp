@@ -44,7 +44,7 @@ std::string EpollContext::to_string() {
 EpollSocket::EpollSocket() {
     _thread_pool = NULL;
     _use_default_tp = true;
-    _status = S_RUN;
+    _status = S_INIT;
     _epollfd = -1;
     _clients = 0;
     _max_idle_sec = 0;
@@ -226,7 +226,7 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     update_interact_time(epoll_context, time(NULL));
 
     int ret = socket_handler.on_writeable(*epoll_context);
-    if(ret == WRITE_CONN_CLOSE) {
+    if (ret == WRITE_CONN_CLOSE) {
         return close_and_release(event);
     }
 
@@ -331,12 +331,7 @@ int EpollSocket::handle_event(epoll_event &e) {
     if (_listen_sockets.count(e.data.fd)) {
         if (_status != S_RUN) {
             LOG_WARN("current status:%d, not accept new connect", _status);
-            pthread_mutex_lock(&_client_lock);
-            if (_clients == 0 && _status == S_REJECT_CONN) {
-                _status = S_STOP;
-                LOG_INFO("client is empty and ready for stop server!");
-            }
-            pthread_mutex_unlock(&_client_lock);
+            return -1;
         } 
         // accept connection
         ret = this->handle_accept_event(_epollfd, e, *_watcher);
@@ -428,9 +423,11 @@ int EpollSocket::get_clients_info(std::stringstream &ss) {
 }
 
 int EpollSocket::start_event_loop() {
-    int timeout_ms = 1000;
+    int timeout_ms = 200;
     epoll_event *events = new epoll_event[_max_events];
     int ret = 0;
+
+    _status = S_RUN;
     while (_status != S_STOP) {
         int fds_num = epoll_wait(_epollfd, events, _max_events, timeout_ms);
         if (fds_num == -1) {
@@ -445,6 +442,13 @@ int EpollSocket::start_event_loop() {
             this->handle_event(events[i]);
         }
         clear_idle_clients();
+
+        pthread_mutex_lock(&_client_lock);
+        if (_clients == 0 && _status == S_REJECT_CONN) {
+            _status = S_STOP;
+            LOG_INFO("client is empty and ready for stop server!");
+        }
+        pthread_mutex_unlock(&_client_lock);
     }
     LOG_INFO("epoll wait loop stop ...");
     if (events != NULL) {
@@ -473,9 +477,14 @@ int EpollSocket::start_epoll() {
     return start_event_loop();
 }
 
+bool EpollSocket::is_run() {
+    return _status == S_RUN;
+}
+
 int EpollSocket::stop_epoll() {
     _status = S_REJECT_CONN;
     LOG_INFO("stop epoll , current clients:%u", _clients);
+    _thread_pool->destroy_threadpool();
     return 0;
 }
 

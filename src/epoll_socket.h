@@ -62,9 +62,10 @@ class EpollSocketWatcher {
 };
 
 enum EpollSocketStatus {
-    S_RUN = 0,
-    S_REJECT_CONN = 1,
-    S_STOP = 2
+    S_INIT = 0,
+    S_RUN = 1,
+    S_REJECT_CONN = 2,
+    S_STOP = 3
 };
 
 class EpollSocket {
@@ -118,6 +119,8 @@ class EpollSocket {
         int start_epoll();
         
         int stop_epoll();
+        
+        bool is_run();
 
         void set_thread_pool(ThreadPool *tp);
 
