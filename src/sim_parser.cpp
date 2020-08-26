@@ -310,6 +310,7 @@ int ss_on_header_field(http_parser *p, const char *buf, size_t len) {
         req->_header_fields.push_back(field);
         req->_last_was_value = false;
     } else {
+        // when parse field partial, append the new field part
         req->_header_fields[req->_header_fields.size() - 1] += field;
     }
     LOG_DEBUG("GET field:%s", field.c_str());
