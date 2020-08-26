@@ -2,4 +2,4 @@
 (1) Unit test code coverage up to 85% DONE at 2020-03-21
 (2) Callback handler support non threadsafe class
 2020-08-26
-(1) add interceptor support
+(1) add interceptor support, reference: https://blog.csdn.net/vbirdbest/article/details/72898776
