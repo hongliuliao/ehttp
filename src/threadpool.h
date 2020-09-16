@@ -12,28 +12,28 @@ const int STOPPED = 1;
 class Mutex {
     public:
         Mutex() {
-            pthread_mutex_init(&m_lock, NULL);
-            is_locked = false;
+            pthread_mutex_init(&_lock, NULL);
+            _is_locked = false;
         }
         ~Mutex() {
-            while(is_locked);
+            while(_is_locked);
             unlock(); // Unlock Mutex after shared resource is safe
-            pthread_mutex_destroy(&m_lock);
+            pthread_mutex_destroy(&_lock);
         }
         void lock() {
-            pthread_mutex_lock(&m_lock);
-            is_locked = true;
+            pthread_mutex_lock(&_lock);
+            _is_locked = true;
         }
         void unlock() {
-            is_locked = false; // do it BEFORE unlocking to avoid race condition
-            pthread_mutex_unlock(&m_lock);
+            _is_locked = false; // do it BEFORE unlocking to avoid race condition
+            pthread_mutex_unlock(&_lock);
         }
         pthread_mutex_t* get_mutex_ptr() {
-            return &m_lock;
+            return &_lock;
         }
     private:
-        pthread_mutex_t m_lock;
-        volatile bool is_locked;
+        pthread_mutex_t _lock;
+        volatile bool _is_locked;
 };
 
 class CondVar {
