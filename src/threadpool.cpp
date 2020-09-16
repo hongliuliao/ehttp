@@ -102,16 +102,15 @@ int ThreadPool::destroy_threadpool() {
     // modified in a lock!
     _task_mutex.lock();
     _pool_state = STOPPED;
-    _task_mutex.unlock();
     LOG_INFO("Broadcasting STOP signal to all threads...");
     _task_cond_var.broadcast(); // notify all threads we are shttung down
+    _task_mutex.unlock();
 
     int ret = -1;
     for (int i = 0; i < _pool_size; i++) {
         void* result;
         ret = pthread_join(_threads[i], &result);
         LOG_DEBUG("pthread_join() returned %d", ret);
-        _task_cond_var.broadcast(); // try waking up a bunch of threads that are still waiting
     }
     LOG_INFO("%d threads exited from the thread pool, task size:%u", 
             _pool_size, _tasks.size());
