@@ -111,6 +111,7 @@ class EpollSocket {
          ~EpollSocket();
         
         int multi_thread_handle_read_event(epoll_event &e);
+	int multi_thread_handle_write_event(epoll_event &e);
         int handle_readable_event(epoll_event &event);
         int handle_accept_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
         int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
@@ -145,6 +146,8 @@ class EpollSocket {
         int update_interact_time(EpollContext *ctx, time_t t);
         int clear_idle_clients();
 
+	int get_epfd();
+	EpollSocketWatcher *get_watcher();
 };
 
 struct TaskData {
