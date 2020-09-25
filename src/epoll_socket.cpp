@@ -60,7 +60,7 @@ EpollSocket::~EpollSocket() {
 }
 
 int EpollSocket::get_epfd(){
-        return _epollfd;
+    return _epollfd;
 }
 
 EpollSocketWatcher *EpollSocket::get_watcher(){ 
@@ -71,12 +71,20 @@ void write_func(void *data) {
         TaskData *td = (TaskData *) data;
         EpollSocketWatcher *watcher = td->es->get_watcher();
         int ep_fd = td->es->get_epfd();
-        td->es->handle_writeable_event(ep_fd,td->event,*watcher);
+        td->es->handle_writeable_event(ep_fd, td->event, *watcher);
+
+	EpollContext *hc = (EpollContext *) td->event.data.ptr;
+	if (hc != NULL) {
+		hc->_ctx_status = CONTEXT_WRITE_OVER;
+	}
 
         delete td;
 }
 
 int EpollSocket::multi_thread_handle_write_event(epoll_event &e) {
+
+	EpollContext *hc = (EpollContext *) e.data.ptr;
+	hc->_ctx_status = CONTEXT_WRITING;
 
         TaskData *tdata = new TaskData();
         tdata->event = e;
@@ -419,7 +427,7 @@ int EpollSocket::clear_idle_clients() {
          //long long id = it->first;
          EpollContext *ctx = it->second;
          if (ctx->_last_interact_time <= timeout_ts && 
-                 ctx->_ctx_status != CONTEXT_READING) {
+                 ctx->_ctx_status != CONTEXT_READING && ctx->_ctx_status != CONTEXT_WRITING) {
              LOG_DEBUG("find idle client fd:%d", ctx->fd);
              epoll_event e;
              memset(&e, 0, sizeof(e));
