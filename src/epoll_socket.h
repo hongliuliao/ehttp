@@ -85,8 +85,6 @@ class EpollSocket {
 
         int init_default_tp();
 
-        int init_tp();
-
         int create_epoll();
 
         int add_listen_sock_to_epoll();
@@ -120,20 +118,14 @@ class EpollSocket {
         int handle_writeable_event(int &epollfd, epoll_event &event, EpollSocketWatcher &socket_watcher);
         int handle_event(epoll_event &e);
 
+        int init_tp();
         int start_epoll();
-        
         int stop_epoll();
-        
         bool is_run();
-
         void set_thread_pool(ThreadPool *tp);
-
         void set_port(int port);
-
         void set_watcher(EpollSocketWatcher *w);
-
         void set_backlog(int backlog);
-
         void set_max_events(int max_events);
 
         //void set_schedule(ScheduleHandlerPtr h);
@@ -149,8 +141,8 @@ class EpollSocket {
         int update_interact_time(EpollContext *ctx, time_t t);
         int clear_idle_clients();
 
-	int get_epfd();
-	EpollSocketWatcher *get_watcher();
+        int get_epfd();
+        EpollSocketWatcher *get_watcher();
 };
 
 struct TaskData {

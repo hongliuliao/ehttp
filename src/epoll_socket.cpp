@@ -82,9 +82,14 @@ void write_func(void *data) {
 }
 
 int EpollSocket::multi_thread_handle_write_event(epoll_event &e) {
-
     EpollContext *hc = (EpollContext *) e.data.ptr;
+    if (hc == NULL) {
+        LOG_WARN("Get epoll context fail in write event!");
+        return -1;
+    }
     hc->_ctx_status = CONTEXT_WRITING;
+    
+    update_interact_time(hc, time(NULL));
 
     TaskData *tdata = new TaskData();
     tdata->event = e;
@@ -265,8 +270,6 @@ int EpollSocket::handle_writeable_event(int &epollfd, epoll_event &event, EpollS
     int fd = epoll_context->fd;
     LOG_DEBUG("start write data");
 
-    update_interact_time(epoll_context, time(NULL));
-
     int ret = socket_handler.on_writeable(*epoll_context);
     if (ret == WRITE_CONN_CLOSE) {
         return close_and_release(event);
@@ -349,6 +352,10 @@ int EpollSocket::multi_thread_handle_read_event(epoll_event &e) {
     // handle readable async
     LOG_DEBUG("start handle readable event");
     EpollContext *hc = (EpollContext *) e.data.ptr;
+    if (hc == NULL) {
+        LOG_WARN("Get epoll context fail in read event!");
+        return -1;
+    }
     hc->_ctx_status = CONTEXT_READING;
 
     update_interact_time(hc, time(NULL));
@@ -383,7 +390,7 @@ int EpollSocket::handle_event(epoll_event &e) {
     } else if (e.events & EPOLLOUT) {
         // writeable
         if (_watcher != NULL) {
-            multi_thread_handle_write_event(e);
+            ret = multi_thread_handle_write_event(e);
         }
     } else {
         LOG_INFO("unkonw events :%d", e.events);
