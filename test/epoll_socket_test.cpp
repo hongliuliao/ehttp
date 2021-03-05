@@ -130,10 +130,14 @@ class TestWatcher : public EpollSocketWatcher {
 
 TEST(EpollSocketTest, test_handle_event) {
     EpollSocket es;
+    int ret = es.init_tp();
+    ASSERT_EQ(0, ret); 
+
     epoll_event ee;
     memset(&ee, 0, sizeof(ee));
-    int ret = es.handle_event(ee);
+    ret = es.handle_event(ee);
     ASSERT_EQ(-1, ret); 
+
     ee.events = EPOLLOUT;
     es.set_watcher(new TestWatcher());
     ret = es.handle_event(ee);

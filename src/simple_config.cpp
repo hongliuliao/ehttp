@@ -18,12 +18,13 @@ int get_config_map(const char *config_file, std::map<std::string, std::string> &
         std::string line;
         std::getline(fs, line);
 
-        if (line[0] == '#') {
-            continue;
-        }
         if (line.empty()) {
             continue;
         }
+        if (line[0] == '#') {
+            continue;
+        }
+        
         std::stringstream ss;
         ss << line;
         std::string key, value;
