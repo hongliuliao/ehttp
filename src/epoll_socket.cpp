@@ -434,7 +434,7 @@ int EpollSocket::clear_idle_clients() {
              e.data.ptr = ctx;
              remove_evs.push_back(e);
          } else {
-             LOG_DEBUG("find idle client but is reading, skip it!");
+             LOG_DEBUG("this client is using, skip it!");
          }
     }
     pthread_mutex_unlock(&_client_lock);
