@@ -63,6 +63,7 @@ class FileAppender {
         int init(std::string dir, std::string file);
         bool is_inited();
         int write_log(char *log, const char *format, va_list ap);
+        int shift_file(struct timeval tv);
         int shift_file_if_need(struct timeval tv, struct timezone tz);
         int delete_old_log(timeval tv);
         void set_retain_day(int rd);

@@ -68,6 +68,32 @@ int FileAppender::write_log(char *log, const char *format, va_list ap) {
     return 0;
 }
 
+struct tm* get_localtime(time_t *input, struct tm *t) {
+    return localtime_r(input, t);
+}
+
+int FileAppender::shift_file(struct timeval tv) {
+    time_t y_sec = tv.tv_sec - ONE_DAY_SECONDS;
+    struct tm t;
+    struct tm* tm = get_localtime(&y_sec, &t); //yesterday
+    if (tm == NULL) {
+        return -1;
+    }
+    char new_file[100];
+    bzero(new_file, 100);
+    sprintf(new_file, "%s.%04d-%02d-%02d",
+            _log_file.c_str(),
+            tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
+    std::string new_file_path = _log_dir + "/" + new_file;
+    if (access(new_file_path.c_str(), F_OK) != 0) {
+        rename(_log_file_path.c_str(), new_file_path.c_str());
+        // reopen new log file
+        _fs.close();
+        _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
+    }
+    return 0;
+}
+
 int FileAppender::shift_file_if_need(struct timeval tv, struct timezone tz) {
     if (_last_sec == 0) {
         _last_sec = tv.tv_sec;
@@ -78,23 +104,8 @@ int FileAppender::shift_file_if_need(struct timeval tv, struct timezone tz) {
     long fix_last_sec = _last_sec - tz.tz_minuteswest * 60;
     if (fix_now_sec / ONE_DAY_SECONDS - fix_last_sec / ONE_DAY_SECONDS) {
         pthread_mutex_lock(&writelock);
-
-        struct tm *tm;
-        time_t y_sec = tv.tv_sec - ONE_DAY_SECONDS;
-        tm = localtime(&y_sec); //yesterday
-        char new_file[100];
-        bzero(new_file, 100);
-        sprintf(new_file, "%s.%04d-%02d-%02d",
-                _log_file.c_str(),
-                tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday);
-        std::string new_file_path = _log_dir + "/" + new_file;
-        if (access(new_file_path.c_str(), F_OK) != 0) {
-            rename(_log_file_path.c_str(), new_file_path.c_str());
-            // reopen new log file
-            _fs.close();
-            _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
-        }
-        ret = 1;
+        
+        ret = shift_file(tv);
 
         pthread_mutex_unlock(&writelock);
 
@@ -122,8 +133,12 @@ int FileAppender::delete_old_log(timeval tv) {
     old_tv.tv_usec = tv.tv_usec;
     char old_file[100];
     memset(old_file, 0, 100);
-    struct tm *tm;
-    tm = localtime(&old_tv.tv_sec);
+
+    struct tm t;
+    struct tm* tm = get_localtime(&old_tv.tv_sec, &t);
+    if (tm == NULL) {
+        return -1;
+    }
     sprintf(old_file, "%s.%04d-%02d-%02d",
             _log_file.c_str(), tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday - 1);
     std::string old_file_path = _log_dir + "/" + old_file;
@@ -168,8 +183,11 @@ std::string _get_show_time(timeval tv) {
 	char show_time[40];
 	memset(show_time, 0, 40);
 
-	struct tm *tm;
-	tm = localtime(&tv.tv_sec);
+	struct tm t;
+	struct tm* tm = get_localtime(&tv.tv_sec, &t);
+    if (tm == NULL) {
+        return "unkonw time";
+    }
 
 	sprintf(show_time, "%04d-%02d-%02d %02d:%02d:%02d.%03d",
 			tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
