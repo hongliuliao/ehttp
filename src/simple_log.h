@@ -16,23 +16,23 @@ const int DEBUG_LEVEL = 4;
 extern int log_level;
 
 #define LOG_ERROR(format, args...) \
-    if(log_level >= ERROR_LEVEL) { \
-		log_error("%s %s(%d): " format, "ERROR", __FILE__, __LINE__, ##args); \
+    if (log_level >= ERROR_LEVEL) { \
+        log_error("%s %s(%d): " format, "ERROR", __FILE__, __LINE__, ##args); \
     }
 
 #define LOG_WARN(format, args...) \
-    if(log_level >= WARN_LEVEL) { \
-		log_warn("%s %s(%d): " format, "WARN", __FILE__, __LINE__, ##args); \
+    if (log_level >= WARN_LEVEL) { \
+        log_warn("%s %s(%d): " format, "WARN", __FILE__, __LINE__, ##args); \
     }
 
 #define LOG_INFO(format, args...) \
-    if(log_level >= INFO_LEVEL) { \
-		log_info("%s %s(%d): " format, "INFO", __FILE__, __LINE__, ##args); \
+    if (log_level >= INFO_LEVEL) { \
+        log_info("%s %s(%d): " format, "INFO", __FILE__, __LINE__, ##args); \
     }
 
 #define LOG_DEBUG(format, args...) \
-    if(log_level >= DEBUG_LEVEL) { \
-		log_debug("%s %s(%d): " format, "DEBUG", __FILE__, __LINE__, ##args); \
+    if (log_level >= DEBUG_LEVEL) { \
+        log_debug("%s %s(%d): " format, "DEBUG", __FILE__, __LINE__, ##args); \
     }
 
 #define CHECK_RET(ret, msg, args...) if (ret != 0) { \
@@ -44,8 +44,6 @@ extern int log_level;
     LOG_ERROR(msg, args); \
     return ret; \
 } \
-
-
 
 std::string _get_show_time();
 
