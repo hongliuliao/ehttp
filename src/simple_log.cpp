@@ -90,6 +90,7 @@ int FileAppender::shift_file(struct timeval tv) {
         // reopen new log file
         _fs.close();
         _fs.open(_log_file_path.c_str(), std::fstream::out | std::fstream::app);
+        return 1;
     }
     return 0;
 }
