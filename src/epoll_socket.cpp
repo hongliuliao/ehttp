@@ -190,7 +190,7 @@ int EpollSocket::add_client(EpollContext *ctx) {
 EpollContext *EpollSocket::create_client(int conn_sock, const std::string &client_ip) {
     EpollContext *epoll_context = new EpollContext();
     epoll_context->fd = conn_sock;
-    epoll_context->client_ip = client_ip;
+    epoll_context->_client_ip = client_ip;
     epoll_context->_last_interact_time = time(NULL);
     g_client_id++;
     epoll_context->_id = g_client_id;

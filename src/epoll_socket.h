@@ -41,7 +41,7 @@ class EpollContext {
         void *ptr;
         int fd;
         time_t _last_interact_time; // unit is second
-        std::string client_ip;
+        std::string _client_ip;
         int _ctx_status;
 };
 

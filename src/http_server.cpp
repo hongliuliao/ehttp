@@ -306,7 +306,7 @@ int HttpEpollWatcher::on_readable(int &epollfd, epoll_event &event) {
         return READ_OVER;
     } 
 
-    http_context->get_request().set_client_ip(&epoll_context->client_ip);
+    http_context->get_request().set_client_ip(&epoll_context->_client_ip);
     this->handle_request(http_context->get_request(), http_context->get_res());
 
     return READ_OVER;
@@ -358,7 +358,7 @@ int HttpEpollWatcher::on_writeable(EpollContext &epoll_context) {
         int cost_time = hc->get_cost_time();
         LOG_INFO("access_log %s %s status_code:%d cost_time:%d us, body_size:%d, client_ip:%s",
                 http_method.c_str(), request_url.c_str(), res._code_msg.status_code,
-                cost_time, res._body.size(), epoll_context.client_ip.c_str());
+                cost_time, res._body.size(), epoll_context._client_ip.c_str());
     }
 
     if (is_keepalive && nwrite > 0) {

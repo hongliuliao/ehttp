@@ -71,4 +71,12 @@ TEST(HttpServerTest, test_start) {
     ASSERT_EQ(0, ret);
 }
 
+TEST(HttpEpollWatcherTest, test_handle_request) {
+    HttpEpollWatcher watcher;
+    Request req;
+    Response rsp;
+    int ret = watcher.handle_request(req, rsp);
+    ASSERT_EQ(0, ret);
+}
+
 /* vim: set expandtab ts=4 sw=4 sts=4 tw=100: */
