@@ -72,7 +72,8 @@ TEST(HttpServerTest, test_start) {
 }
 
 TEST(HttpEpollWatcherTest, test_handle_request) {
-    HttpEpollWatcher watcher;
+    std::map<std::string, Resource> resource_map;
+    HttpEpollWatcher watcher(&resource_map);
     Request req;
     Response rsp;
     int ret = watcher.handle_request(req, rsp);
