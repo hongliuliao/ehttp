@@ -577,7 +577,7 @@ int Request::parse_request(const char *read_buffer, int read_size) {
         LOG_INFO("TOO BIG REQUEST WE WILL REFUSE IT! MAX_REQ_SIZE:%d", MAX_REQ_SIZE);
         return -1;
     }
-    LOG_DEBUG("read from client: size:%d, content:%s", read_size, read_buffer);
+    LOG_DEBUG("read from client: size:%d, content:%.4096s", read_size, read_buffer);
     ssize_t nparsed = http_parser_execute(&_parser, &_settings, read_buffer, read_size);
     if (nparsed != read_size) {
         std::string err_msg = "unkonw";

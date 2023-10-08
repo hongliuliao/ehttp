@@ -228,11 +228,6 @@ int EpollSocket::handle_accept_event(int &epollfd, epoll_event &event, EpollSock
 void read_func(void *data) {
     TaskData *td = (TaskData *) data;
     td->es->handle_readable_event(td->event);
-
-    EpollContext *hc = (EpollContext *) td->event.data.ptr;
-    if (hc != NULL) {
-        hc->_ctx_status = CONTEXT_READ_OVER;
-    }
     delete td;
 }
 
@@ -247,6 +242,9 @@ int EpollSocket::handle_readable_event(epoll_event &event) {
     int ret = _watcher->on_readable(_epollfd, event);
     if (ret == READ_CLOSE) {
         return close_and_release(event);
+    }
+    if (epoll_context != NULL) {
+        epoll_context->_ctx_status = CONTEXT_READ_OVER;
     }
 
     if (ret == READ_CONTINUE) {

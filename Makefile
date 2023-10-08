@@ -5,8 +5,8 @@ CXXFLAGS += -g -Wall
 LDFLAGS += -pthread
 
 ifdef ACOV
-	CXXFLAGS += -fprofile-arcs -ftest-coverage
-	LDFLAGS += -lgcov --coverage
+	CXXFLAGS += -fprofile-arcs -ftest-coverage -fsanitize=address
+	LDFLAGS += -lgcov --coverage -fsanitize=address
 endif
 
 MULTIPART_PARSER_INC_PATH=-I deps/multipart-parser-c/
